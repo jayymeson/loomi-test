@@ -46,8 +46,18 @@ export class UsersService {
       const user = await this.usersRepository.create(createUserDto);
       return user;
     } catch (error) {
+      // TODO: alterar os logs de erros
       if (error instanceof PrismaClientKnownRequestError) {
         if (error.code === 'P2002') {
+          const targetFields = error.meta?.target as string[] | undefined;
+
+          if (
+            Array.isArray(targetFields) &&
+            targetFields.includes('agency_account_unique')
+          ) {
+            throw new ConflictException('Os dados bancários já estão em uso.');
+          }
+
           throw new ConflictException('E-mail já está em uso.');
         }
       }
