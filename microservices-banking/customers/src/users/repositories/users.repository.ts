@@ -1,0 +1,48 @@
+import { Injectable } from '@nestjs/common';
+import { CreateUserDto } from '../dto/create-user.dto';
+import { UpdateUserDto } from '../dto/update-user.dto';
+import { User } from '../interface/user.interface';
+import { PrismaService } from '../../prisma/prisma.service';
+
+@Injectable()
+export class UsersRepository {
+  constructor(private readonly prisma: PrismaService) {}
+
+  async create(createUserDto: CreateUserDto): Promise<User> {
+    const { bankingDetails, ...rest } = createUserDto;
+    return this.prisma.user.create({
+      data: {
+        ...rest,
+        bankingDetails: bankingDetails ? { create: bankingDetails } : undefined,
+      },
+    });
+  }
+
+  async findById(userId: string): Promise<User> {
+    return this.prisma.user.findUnique({
+      where: { id: userId },
+      include: { bankingDetails: true },
+    });
+  }
+
+  async update(userId: string, updateUserDto: UpdateUserDto): Promise<User> {
+    const { bankingDetails, ...rest } = updateUserDto;
+    return this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        ...rest,
+        bankingDetails: bankingDetails ? { update: bankingDetails } : undefined,
+      },
+    });
+  }
+
+  async updateProfilePicture(
+    userId: string,
+    profilePicture: string,
+  ): Promise<User> {
+    return this.prisma.user.update({
+      where: { id: userId },
+      data: { profilePicture },
+    });
+  }
+}

@@ -1,55 +1,54 @@
-version: "3"
-
 services:
   rabbitmq:
     image: rabbitmq:3.10-management
     container_name: rabbitmq
     hostname: rabbitmq
     ports:
-      - 15672:15672
-      - 5672:5672
+      - 15673:15672
+      - 5673:5672 
     volumes:
-      - ./.docker/rabbitmq/.rabbitmq_data:/var/lib/rabbitmq/mnesia
+      - ./microservices-banking/.docker/rabbitmq/.rabbitmq_data:/var/lib/rabbitmq/mnesia
     environment:
       - RABBITMQ_DEFAULT_USER=${RABBITMQ_DEFAULT_USER}
       - RABBITMQ_DEFAULT_PASS=${RABBITMQ_DEFAULT_PASS}
     env_file:
-      - ./.env
+      - ./microservices-banking/.env
 
   postgres-transactions:
     image: postgres:13
     container_name: postgres-transactions
     environment:
-      POSTGRES_USER: ${POSTGRES_TRANSACTIONS_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_TRANSACTIONS_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_TRANSACTIONS_DB}
+      POSTGRES_USER: "transactions_user"
+      POSTGRES_PASSWORD: "transactions_password"
+      POSTGRES_DB: "transactions_db"
     ports:
       - 5432:5432
     volumes:
-      - ./.docker/postgresql/transactions-data:/var/lib/postgresql/data
-      - ./.docker/postgresql/transactions-init-scripts:/docker-entrypoint-initdb.d
+      - ./microservices-banking/.docker/postgresql/transactions-data:/var/lib/postgresql/data
+      - ./microservices-banking/.docker/postgresql/transactions-init-scripts:/docker-entrypoint-initdb.d
     env_file:
-      - ./.env
+      - ./microservices-banking/.env
 
   postgres-customers:
     image: postgres:13
     container_name: postgres-customers
     environment:
-      POSTGRES_USER: ${POSTGRES_CLIENTS_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_CLIENTS_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_CLIENTS_DB}
+      POSTGRES_USER: "customers_user"
+      POSTGRES_PASSWORD: "customers_password"
+      POSTGRES_DB: "customers_db"
+
     ports:
       - 5433:5432
     volumes:
-      - ./.docker/postgresql/clients-data:/var/lib/postgresql/data
-      - ./.docker/postgresql/clients-init-scripts:/docker-entrypoint-initdb.d
+      - ./microservices-banking/.docker/postgresql/clients-data:/var/lib/postgresql/data
+      - ./microservices-banking/.docker/postgresql/clients-init-scripts:/docker-entrypoint-initdb.d
     env_file:
-      - ./.env
+      - ./microservices-banking/.env
 
-  transaction-ms:
-    container_name: transaction-ms
+  transactions:
+    container_name: transactions
     build:
-      context: "./transactions-ms"
+      context: "./microservices-banking/transactions"
       dockerfile: Dockerfile
     command: npm run start:dev
     depends_on:
@@ -58,15 +57,15 @@ services:
     ports:
       - 3000:3000
     volumes:
-      - ./transactions-ms:/usr/src/app
+      - ./microservices-banking/transactions:/usr/src/app
       - /usr/src/app/node_modules
     env_file:
-      - ./transactions-ms/.env
+      - ./microservices-banking/transactions/.env
 
   customers:
     container_name: customers
     build:
-      context: "./customers"
+      context: "./microservices-banking/customers"
       dockerfile: Dockerfile
     command: npm run start:dev
     depends_on:
@@ -75,15 +74,15 @@ services:
     ports:
       - 3001:3001
     volumes:
-      - ./customers:/usr/src/app
+      - ./microservices-banking/customers:/usr/src/app
       - /usr/src/app/node_modules
     env_file:
-      - ./customers/.env
+      - ./microservices-banking/customers/.env
 
   api-getway:
     container_name: api-getway
     build:
-      context: "./api-getway"
+      context: "./microservices-banking/api-gateway"
       dockerfile: Dockerfile
     command: npm run start:dev
     depends_on:
@@ -91,7 +90,7 @@ services:
     ports:
       - 3002:3002
     volumes:
-      - ./api-getway:/usr/src/app
+      - ./microservices-banking/api-gateway:/usr/src/app
       - /usr/src/app/node_modules
     env_file:
-      - ./api-getway/.env
+      - ./microservices-banking/api-gateway/.env
