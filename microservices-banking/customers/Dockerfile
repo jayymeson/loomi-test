@@ -20,4 +20,4 @@ RUN chmod +x wait-for-it.sh
 
 RUN npm run build
 
-CMD ["sh", "-c", "./wait-for-it.sh postgres-transactions:5432 -- npx prisma migrate deploy && node dist/main"]
+CMD ["sh", "-c", "./wait-for-it.sh postgres-customers:5432 -- npx prisma migrate deploy && node dist/main"]
