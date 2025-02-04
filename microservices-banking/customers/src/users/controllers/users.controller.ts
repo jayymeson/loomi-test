@@ -41,9 +41,7 @@ export class UsersController {
 
     const createUserDto = plainToInstance(CreateUserDto, {
       ...body,
-      bankingDetails: body.bankingDetails
-        ? JSON.parse(body.bankingDetails)
-        : undefined,
+      bankingDetails: body.bankingDetails,
     });
 
     return this.usersService.createUser(createUserDto, file);
