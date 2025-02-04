@@ -11,10 +11,14 @@ import * as admin from 'firebase-admin';
 import { v4 as uuidv4 } from 'uuid';
 import { Express } from 'express';
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
+import { RabbitmqService } from 'src/rabbitmq/rabbitmq.service';
 
 @Injectable()
 export class UsersService {
-  constructor(private readonly usersRepository: UsersRepository) {
+  constructor(
+    private readonly usersRepository: UsersRepository,
+    private readonly rabbitmqService: RabbitmqService,
+  ) {
     if (!admin.apps.length) {
       admin.initializeApp({
         credential: admin.credential.cert(
@@ -44,6 +48,7 @@ export class UsersService {
       }
 
       const user = await this.usersRepository.create(createUserDto);
+      this.rabbitmqService.publish('user.created', user);
       return user;
     } catch (error) {
       // TODO: alterar os logs de erros
@@ -81,6 +86,7 @@ export class UsersService {
   ): Promise<User> {
     try {
       const user = await this.usersRepository.update(userId, updateUserDto);
+      this.rabbitmqService.publish('user.updated', user);
       return user;
     } catch (error) {
       console.error('Error updating user:', error);
@@ -107,6 +113,7 @@ export class UsersService {
         userId,
         profilePicture,
       );
+      this.rabbitmqService.publish('user.updated', user);
       return user;
     } catch (error) {
       console.error('Error updating profile picture:', error);
