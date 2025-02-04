@@ -32,4 +32,4 @@ const isTestEnvironment = process.env.NODE_ENV === 'test';
     },
   ],
 })
-export class AppModule {}
+export class UserModule {}
