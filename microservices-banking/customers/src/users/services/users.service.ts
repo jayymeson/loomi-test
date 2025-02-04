@@ -1,4 +1,8 @@
-import { Injectable } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import { UsersRepository } from '../repositories/users.repository';
 import { CreateUserDto } from '../dto/create-user.dto';
 import { UpdateUserDto } from '../dto/update-user.dto';
@@ -6,6 +10,7 @@ import { User } from '../interface/user.interface';
 import * as admin from 'firebase-admin';
 import { v4 as uuidv4 } from 'uuid';
 import { Express } from 'express';
+import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 
 @Injectable()
 export class UsersService {
@@ -41,8 +46,22 @@ export class UsersService {
       const user = await this.usersRepository.create(createUserDto);
       return user;
     } catch (error) {
-      console.error('Error creating user:', error);
-      throw error;
+      // TODO: alterar os logs de erros
+      if (error instanceof PrismaClientKnownRequestError) {
+        if (error.code === 'P2002') {
+          const targetFields = error.meta?.target as string[] | undefined;
+
+          if (
+            Array.isArray(targetFields) &&
+            targetFields.includes('agency_account_unique')
+          ) {
+            throw new ConflictException('Os dados bancários já estão em uso.');
+          }
+
+          throw new ConflictException('E-mail já está em uso.');
+        }
+      }
+      throw new InternalServerErrorException('Erro ao criar usuário.');
     }
   }
 
