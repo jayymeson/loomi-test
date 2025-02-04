@@ -11,9 +11,11 @@ import * as admin from 'firebase-admin';
 import { v4 as uuidv4 } from 'uuid';
 import { Express } from 'express';
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
+import { UserData } from '../interface/user-data.interface';
 
 @Injectable()
 export class UsersService {
+  private readonly cache = new Map<string, UserData>();
   constructor(private readonly usersRepository: UsersRepository) {
     if (!admin.apps.length) {
       admin.initializeApp({
@@ -44,6 +46,7 @@ export class UsersService {
       }
 
       const user = await this.usersRepository.create(createUserDto);
+      this.cache.set(user.id, user);
       return user;
     } catch (error) {
       // TODO: alterar os logs de erros
@@ -68,6 +71,7 @@ export class UsersService {
   async getUserById(userId: string): Promise<User> {
     try {
       const user = await this.usersRepository.findById(userId);
+      this.cache.set(user.id, user);
       return user;
     } catch (error) {
       console.error('Error getting user by ID:', error);
@@ -81,6 +85,7 @@ export class UsersService {
   ): Promise<User> {
     try {
       const user = await this.usersRepository.update(userId, updateUserDto);
+      this.cache.set(user.id, user);
       return user;
     } catch (error) {
       console.error('Error updating user:', error);
@@ -107,6 +112,7 @@ export class UsersService {
         userId,
         profilePicture,
       );
+      this.cache.set(user.id, user);
       return user;
     } catch (error) {
       console.error('Error updating profile picture:', error);
