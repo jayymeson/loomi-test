@@ -1,12 +1,17 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService } from 'src/prisma/prisma.service';
-import { CreateTransactionDto } from './dto/create-transaction.dto';
+import { CreateTransactionDto } from '../dto/create-transaction.dto';
+import { PrismaService } from '../../prisma/prisma.service';
+import { Transaction } from '@prisma/client';
+import { TransactionsRepository } from '../repositories/transactions.repository';
 
 @Injectable()
 export class TransactionsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly transactionsRepository: TransactionsRepository,
+    private readonly prisma: PrismaService,
+  ) {}
 
-  async createTransaction(dto: CreateTransactionDto) {
+  async createTransaction(dto: CreateTransactionDto): Promise<Transaction> {
     const sender = await this.prisma.user.findUnique({
       where: { id: dto.senderUserId },
     });
@@ -20,17 +25,26 @@ export class TransactionsService {
       );
     }
 
-    return this.prisma.transaction.create({
-      data: {
-        senderUserId: dto.senderUserId,
-        receiverUserId: dto.receiverUserId,
-        amount: dto.amount,
-        description: dto.description,
-      },
-      include: {
-        senderUser: true,
-        receiverUser: true,
-      },
-    });
+    // Se tudo OK, cria a transação no repository
+    const transaction =
+      await this.transactionsRepository.createTransaction(dto);
+
+    // Caso queira publicar um evento "transaction.created", por ex.:
+    // this.rabbitmqService.publish('transaction.created', transaction);
+
+    return transaction;
+  }
+
+  async getTransactionById(transactionId: string): Promise<Transaction> {
+    const transaction =
+      await this.transactionsRepository.findById(transactionId);
+    if (!transaction) {
+      throw new NotFoundException('Transaction not found');
+    }
+    return transaction;
+  }
+
+  async getTransactionsByUserId(userId: string): Promise<Transaction[]> {
+    return this.transactionsRepository.findByUserId(userId);
   }
 }

@@ -3,7 +3,7 @@ import { INestApplication } from '@nestjs/common';
 import * as request from 'supertest';
 import { UsersService } from '../services/users.service';
 import { CreateUserDto } from '../dto/create-user.dto';
-import { AppModule } from '../../user.module';
+import { AppModule } from '../../app.module';
 import { RabbitMQServiceMock } from '../../utils/mocks/rabbitmq.service.mock';
 import { RabbitmqService } from '../../rabbitmq/rabbitmq.service';
 
