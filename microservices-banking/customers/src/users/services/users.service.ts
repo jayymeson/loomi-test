@@ -96,8 +96,12 @@ export class UsersService {
 
   async updateProfilePicture(
     userId: string,
-    file: Express.Multer.File,
+    file?: Express.Multer.File,
   ): Promise<User> {
+    if (!file) {
+      throw new Error(`Nenhuma imagem foi enviada para o usuário ${userId}.`);
+    }
+
     try {
       const bucket = admin.storage().bucket();
       const filename = `${uuidv4()}_${file.originalname}`;

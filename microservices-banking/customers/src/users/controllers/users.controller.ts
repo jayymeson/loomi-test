@@ -9,6 +9,7 @@ import {
   UploadedFile,
   HttpStatus,
   HttpCode,
+  BadRequestException,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiResponse, ApiTags, ApiOperation } from '@nestjs/swagger';
@@ -92,9 +93,12 @@ export class UsersController {
   @UseInterceptors(FileInterceptor('profilePicture'))
   async updateProfilePicture(
     @Param('userId') userId: string,
-    @UploadedFile() file: Express.Multer.File,
+    @UploadedFile() file?: Express.Multer.File,
   ): Promise<void> {
+    if (!file) {
+      throw new BadRequestException('É necessário enviar um arquivo.');
+    }
+
     await this.usersService.updateProfilePicture(userId, file);
-    return;
   }
 }
