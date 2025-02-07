@@ -25,7 +25,6 @@ export class UsersService {
     private readonly usersRepository: UsersRepository,
     private readonly rabbitmqService: RabbitmqService,
   ) {
-    // Initialize Firebase Admin if not already initialized
     if (!admin.apps.length) {
       admin.initializeApp({
         credential: admin.credential.cert(
