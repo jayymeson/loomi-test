@@ -1,23 +1,26 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  UnprocessableEntityException,
+} from '@nestjs/common';
 import { CreateTransactionDto } from '../dto/create-transaction.dto';
-import { PrismaService } from '../../prisma/prisma.service';
-import { Transaction } from '@prisma/client';
+import { Prisma, Transaction } from '@prisma/client';
 import { TransactionsRepository } from '../repositories/transactions.repository';
+import { RabbitmqService } from 'src/rabbitmq/rabbitmq.service';
 
 @Injectable()
 export class TransactionsService {
   constructor(
     private readonly transactionsRepository: TransactionsRepository,
-    private readonly prisma: PrismaService,
+    private readonly rabbitmqService: RabbitmqService,
   ) {}
 
   async createTransaction(dto: CreateTransactionDto): Promise<Transaction> {
-    const sender = await this.prisma.user.findUnique({
-      where: { id: dto.senderUserId },
-    });
-    const receiver = await this.prisma.user.findUnique({
-      where: { id: dto.receiverUserId },
-    });
+    const { sender, receiver } =
+      await this.transactionsRepository.getSenderAndReceiverDetails(
+        dto.senderUserId,
+        dto.receiverUserId,
+      );
 
     if (!sender || !receiver) {
       throw new NotFoundException(
@@ -25,12 +28,23 @@ export class TransactionsService {
       );
     }
 
-    // Se tudo OK, cria a transação no repository
+    if (
+      !sender.balance ||
+      new Prisma.Decimal(sender.balance.balance).toNumber() < dto.amount
+    ) {
+      throw new UnprocessableEntityException(
+        `Insufficient funds: User ${dto.senderUserId} has balance ${sender.balance?.balance.toNumber()}, required ${dto.amount}`,
+      );
+    }
+
     const transaction =
       await this.transactionsRepository.createTransaction(dto);
-
-    // Caso queira publicar um evento "transaction.created", por ex.:
-    // this.rabbitmqService.publish('transaction.created', transaction);
+    await this.transactionsRepository.updateBalances(
+      dto.senderUserId,
+      dto.receiverUserId,
+      dto.amount,
+    );
+    this.rabbitmqService.publish('transaction.completed', transaction);
 
     return transaction;
   }

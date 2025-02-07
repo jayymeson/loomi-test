@@ -12,6 +12,10 @@ import { RabbitmqService } from './rabbitmq.service';
           name: 'user-exchange',
           type: 'direct',
         },
+        {
+          name: 'transaction-exchange',
+          type: 'direct',
+        },
       ],
       uri: `${process.env.URI_RABBITMQ_LOCAL}`,
       enableControllerDiscovery: false,

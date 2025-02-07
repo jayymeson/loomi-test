@@ -25,6 +25,10 @@ const isTestEnvironment = process.env.NODE_ENV === 'test';
           name: 'user-exchange',
           type: 'direct',
         },
+        {
+          name: 'transaction-exchange',
+          type: 'direct',
+        },
       ],
       uri:
         `${process.env.URI_RABBITMQ_LOCAL} ` ||
