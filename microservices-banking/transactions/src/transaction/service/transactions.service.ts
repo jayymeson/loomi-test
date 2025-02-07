@@ -77,7 +77,6 @@ export class TransactionsService {
       `[createTransaction] Transaction created successfully: ID=${transaction.id}`,
     );
 
-    // Publicando o evento para o RabbitMQ
     this.logger.log(
       `[createTransaction] Publishing event ${RabbitmqRoutingKeys.TRANSACTION_COMPLETED} to RabbitMQ`,
     );
