@@ -33,6 +33,13 @@ export class UsersRepository {
     return user;
   }
 
+  async findByEmail(email: string): Promise<User> {
+    return this.prisma.user.findUnique({
+      where: { email },
+      include: { bankingDetails: true },
+    });
+  }
+
   async deposit(userId: string, amount: number): Promise<void> {
     await this.prisma.user.update({
       where: { id: userId },

@@ -11,6 +11,7 @@ import {
   HttpCode,
   BadRequestException,
   Logger,
+  NotFoundException,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import {
@@ -152,6 +153,16 @@ export class UsersController {
     );
     this.metricsService.increment();
     return;
+  }
+
+  @Get('/email/:email')
+  @ApiOperation({ summary: 'Find a user by email' })
+  async getUserByEmail(@Param('email') email: string) {
+    const user = await this.usersService.findByEmail(email);
+    if (!user) {
+      throw new NotFoundException(`User not found with email: ${email}`);
+    }
+    return user;
   }
 
   @ApiOperation({ summary: 'Update profile picture by ID' })

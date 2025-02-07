@@ -89,6 +89,9 @@ services:
       - rabbitmq
     ports:
       - 3002:3002
+    environment:
+      - USER_MS=customers:3001
+      - TRANSACTION_MS=transactions:3000
     volumes:  
       - ./microservices-banking/api-gateway:/usr/src/app
       - /usr/src/app/node_modules

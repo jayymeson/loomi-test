@@ -5,7 +5,7 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
-import { UsersRepository } from '../../repositories/users.repository';
+import { UsersRepository } from '../repositories/users.repository';
 import { CreateUserDto } from '../dto/create-user.dto';
 import { UpdateUserDto } from '../dto/update-user.dto';
 import { User } from '../interface/user.interface';
@@ -16,6 +16,7 @@ import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 import { RabbitmqService } from 'src/rabbitmq/rabbitmq.service';
 import { ErrorMessages } from '../enum/error.message.enum';
 import { RabbitmqRoutingKeys } from 'src/rabbitmq/enum/rabbitmq-events.enum';
+import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class UsersService {
@@ -25,7 +26,6 @@ export class UsersService {
     private readonly usersRepository: UsersRepository,
     private readonly rabbitmqService: RabbitmqService,
   ) {
-    // Initialize Firebase Admin if not already initialized
     if (!admin.apps.length) {
       admin.initializeApp({
         credential: admin.credential.cert(
@@ -62,6 +62,12 @@ export class UsersService {
         createUserDto.profilePicture = profilePicture;
       }
 
+      const saltRounds = 10;
+      createUserDto.password = await bcrypt.hash(
+        createUserDto.password,
+        saltRounds,
+      );
+
       const user = await this.usersRepository.create(createUserDto);
       this.logger.log(
         `[UsersService] [createUser] User created with ID: ${user.id}`,
@@ -83,6 +89,16 @@ export class UsersService {
         ErrorMessages.INTERNAL_SERVER_ERROR,
       );
     }
+  }
+
+  /**
+   * Find client by email.
+   *
+   * @param {string} email - The email of the user
+   *
+   */
+  async findByEmail(email: string) {
+    return this.usersRepository.findByEmail(email);
   }
 
   /**
