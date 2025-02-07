@@ -185,4 +185,25 @@ export class TransactionsService {
       amount: transaction.amount,
     });
   }
+
+  /**
+   * Retrieves recent transactions within the last X days.
+   *
+   * @param {number} days - Number of days to filter transactions
+   * @returns {Promise<Transaction[]>} - List of recent transactions
+   */
+  async getRecentTransactions(days: number): Promise<Transaction[]> {
+    this.logger.log(
+      `[getRecentTransactions] Fetching transactions from the last ${days} days`,
+    );
+
+    const transactions =
+      await this.transactionsRepository.findRecentTransactions(days);
+
+    this.logger.log(
+      `[getRecentTransactions] Found ${transactions.length} transactions in the last ${days} days`,
+    );
+
+    return transactions;
+  }
 }
