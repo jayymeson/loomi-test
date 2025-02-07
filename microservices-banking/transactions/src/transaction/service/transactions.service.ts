@@ -25,12 +25,8 @@ export class TransactionsService {
       );
     }
 
-    // Se tudo OK, cria a transação no repository
     const transaction =
       await this.transactionsRepository.createTransaction(dto);
-
-    // Caso queira publicar um evento "transaction.created", por ex.:
-    // this.rabbitmqService.publish('transaction.created', transaction);
 
     return transaction;
   }
