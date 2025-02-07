@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Param, Body } from '@nestjs/common';
+import { Controller, Get, Post, Param, Body, Patch } from '@nestjs/common';
 import { ApiTags, ApiResponse, ApiOperation } from '@nestjs/swagger';
 import { CreateTransactionDto } from '../dto/create-transaction.dto';
 import { Transaction } from '@prisma/client';
@@ -48,5 +48,20 @@ export class TransactionsController {
   ): Promise<Transaction[]> {
     this.metricsService.increment();
     return this.transactionsService.getTransactionsByUserId(userId);
+  }
+
+  @ApiOperation({ summary: 'Cancel a pending transaction' })
+  @ApiResponse({
+    status: 200,
+    description: 'Transaction canceled successfully',
+  })
+  @ApiResponse({ status: 404, description: 'Transaction not found' })
+  @ApiResponse({ status: 422, description: 'Transaction cannot be canceled' })
+  @Patch(':transactionId/cancel')
+  async cancelTransaction(
+    @Param('transactionId') transactionId: string,
+  ): Promise<void> {
+    this.metricsService.increment();
+    await this.transactionsService.cancelTransaction(transactionId);
   }
 }

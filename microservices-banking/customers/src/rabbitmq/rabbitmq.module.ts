@@ -2,6 +2,7 @@ import { RabbitMQModule } from '@golevelup/nestjs-rabbitmq';
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { RabbitmqService } from './rabbitmq.service';
+import { RabbitmqRoutingKeys } from './enum/rabbitmq-events.enum';
 
 @Module({
   imports: [
@@ -9,12 +10,12 @@ import { RabbitmqService } from './rabbitmq.service';
     RabbitMQModule.forRoot(RabbitMQModule, {
       exchanges: [
         {
-          name: 'user-exchange',
-          type: 'direct',
+          name: RabbitmqRoutingKeys.USER_EXCHANGE,
+          type: RabbitmqRoutingKeys.TYPE,
         },
         {
-          name: 'transaction-exchange',
-          type: 'direct',
+          name: RabbitmqRoutingKeys.TRANSACTION_EXCHANGE,
+          type: RabbitmqRoutingKeys.TYPE,
         },
       ],
       uri: `${process.env.URI_RABBITMQ_LOCAL}`,

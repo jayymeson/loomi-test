@@ -51,6 +51,7 @@ model Transaction {
   amount        Decimal   @db.Decimal(10,2)
   description   String?
   createdAt     DateTime  @default(now())
+  status         String   @default("EFFECTIVE")
 
   senderUser   User  @relation("SenderUser", fields: [senderUserId], references: [id])
   receiverUser User  @relation("ReceiverUser", fields: [receiverUserId], references: [id])

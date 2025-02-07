@@ -6,6 +6,7 @@ import { RabbitmqService } from './rabbitmq/rabbitmq.service';
 import { RabbitMQServiceMock } from './utils/mocks/rabbitmq.service.mock';
 import { PrometheusModule } from '@willsoto/nestjs-prometheus';
 import { MetricsModule } from './metrics/metrics.module';
+import { RabbitmqRoutingKeys } from './rabbitmq/enum/rabbitmq-events.enum';
 
 const isTestEnvironment = process.env.NODE_ENV === 'test';
 
@@ -21,12 +22,12 @@ const isTestEnvironment = process.env.NODE_ENV === 'test';
     RabbitMQModule.forRoot(RabbitMQModule, {
       exchanges: [
         {
-          name: 'user-exchange',
-          type: 'direct',
+          name: RabbitmqRoutingKeys.USER_EXCHANGE,
+          type: RabbitmqRoutingKeys.TYPE,
         },
         {
-          name: 'transaction-exchange',
-          type: 'direct',
+          name: RabbitmqRoutingKeys.TRANSACTION_EXCHANGE,
+          type: RabbitmqRoutingKeys.TYPE,
         },
       ],
       uri:
