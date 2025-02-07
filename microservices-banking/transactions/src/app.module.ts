@@ -4,12 +4,20 @@ import { TransactionModule } from './transaction/transaction.module';
 import { RabbitMQModule } from '@golevelup/nestjs-rabbitmq';
 import { RabbitmqService } from './rabbitmq/rabbitmq.service';
 import { RabbitMQServiceMock } from './utils/mocks/rabbitmq.service.mock';
+import { PrometheusModule } from '@willsoto/nestjs-prometheus';
+import { MetricsModule } from './metrics/metrics.module';
 
 const isTestEnvironment = process.env.NODE_ENV === 'test';
 
 @Module({
   imports: [
     RabbitmqModule,
+    PrometheusModule.register({
+      defaultMetrics: {
+        enabled: false,
+      },
+    }),
+    MetricsModule,
     RabbitMQModule.forRoot(RabbitMQModule, {
       exchanges: [
         {

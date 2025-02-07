@@ -3,11 +3,15 @@ import { ApiTags, ApiResponse, ApiOperation } from '@nestjs/swagger';
 import { CreateTransactionDto } from '../dto/create-transaction.dto';
 import { Transaction } from '@prisma/client';
 import { TransactionsService } from '../service/transactions.service';
+import { MetricsService } from 'src/metrics/metrics.service';
 
 @ApiTags('transactions')
 @Controller('api/transactions')
 export class TransactionsController {
-  constructor(private readonly transactionsService: TransactionsService) {}
+  constructor(
+    private readonly transactionsService: TransactionsService,
+    private readonly metricsService: MetricsService,
+  ) {}
 
   @ApiOperation({ summary: 'Create a new transaction' })
   @ApiResponse({
@@ -20,6 +24,7 @@ export class TransactionsController {
   async createTransaction(
     @Body() createDto: CreateTransactionDto,
   ): Promise<Transaction> {
+    this.metricsService.increment();
     return this.transactionsService.createTransaction(createDto);
   }
 
@@ -30,6 +35,7 @@ export class TransactionsController {
   async getTransactionById(
     @Param('transactionId') transactionId: string,
   ): Promise<Transaction> {
+    this.metricsService.increment();
     return this.transactionsService.getTransactionById(transactionId);
   }
 
@@ -39,6 +45,7 @@ export class TransactionsController {
   async getTransactionsByUserId(
     @Param('userId') userId: string,
   ): Promise<Transaction[]> {
+    this.metricsService.increment();
     return this.transactionsService.getTransactionsByUserId(userId);
   }
 }
