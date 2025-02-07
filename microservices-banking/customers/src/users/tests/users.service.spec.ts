@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { UsersRepository } from '../repositories/users.repository';
+import { UsersRepository } from '../../repositories/users.repository';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateUserDto } from '../dto/create-user.dto';
 import { User } from '../interface/user.interface';
@@ -9,6 +9,7 @@ import { UpdateUserDto } from '../dto/update-user.dto';
 import { ErrorMessages } from '../enum/error.message.enum';
 import * as admin from 'firebase-admin';
 import { Logger } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 
 describe('UsersService', () => {
   let service: UsersService;
@@ -30,13 +31,30 @@ describe('UsersService', () => {
             findById: jest.fn(),
             update: jest.fn(),
             updateProfilePicture: jest.fn(),
+            deposit: jest.fn(),
           },
         },
         {
           provide: RabbitmqService,
           useValue: rabbitmqServiceMock,
         },
-        PrismaService,
+        {
+          provide: PrismaService,
+          useValue: {
+            user: {
+              findUnique: jest.fn().mockResolvedValue({
+                id: '123',
+                name: 'John Doe',
+                email: 'john.doe@example.com',
+                address: '123 Main St',
+                profilePicture: 'https://example.com/profile.jpg',
+                balance: new Prisma.Decimal(50),
+                createdAt: new Date(),
+                updatedAt: new Date(),
+              } as any),
+            },
+          },
+        },
       ],
     }).compile();
 
@@ -75,6 +93,39 @@ describe('UsersService', () => {
       jest.spyOn(repository, 'create').mockResolvedValue(user);
 
       expect(await service.createUser(createUserDto)).toEqual(user);
+    });
+  });
+
+  describe('deposit', () => {
+    it('should deposit money into user account', async () => {
+      // Mockando o método `findById` do repositório para retornar um usuário existente
+      jest.spyOn(repository, 'findById').mockResolvedValue({
+        id: '123',
+        name: 'John Doe',
+        email: 'john.doe@example.com',
+        address: '123 Main St',
+        profilePicture: 'https://example.com/profile.jpg',
+        balance: new Prisma.Decimal(50), // Saldo inicial
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      } as any);
+
+      // Mockando `deposit` para simular um depósito bem-sucedido
+      jest.spyOn(repository, 'deposit').mockResolvedValue(undefined);
+
+      // Chama o serviço de depósito
+      await service.deposit('123', 100);
+
+      // Verifica se `deposit` foi chamado corretamente no repositório
+      expect(repository.deposit).toHaveBeenCalledWith('123', 100);
+    });
+
+    it('should throw NotFoundException if user does not exist', async () => {
+      jest.spyOn(repository, 'findById').mockResolvedValue(null);
+
+      await expect(service.deposit('not-existing', 100)).rejects.toThrow(
+        'User not found',
+      );
     });
   });
 
