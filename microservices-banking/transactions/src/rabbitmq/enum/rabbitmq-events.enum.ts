@@ -6,7 +6,7 @@ export enum RabbitmqRoutingKeys {
   TRANSACTION_EXCHANGE = 'transaction-exchange',
   TRANSACTION_COMPLETED = 'transaction.completed',
   USER_TRANSACTION_COMPLETED = 'user-transaction-completed',
+  TRASACTION_USER_CREATED = 'transaction-user-created',
   TRANSACTION_CANCELED = 'transaction_canceled',
-  USER_TRANSACTION_CANCELED = 'user_transaction_canceled',
   TYPE = 'direct',
 }

@@ -97,6 +97,22 @@ export class UsersController {
     return;
   }
 
+  @ApiOperation({ summary: 'Deposit money into user account' })
+  @ApiResponse({ status: 200, description: 'Deposit successful' })
+  @ApiResponse({ status: 400, description: 'Invalid deposit amount' })
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @Post(':userId/deposit')
+  async deposit(
+    @Param('userId') userId: string,
+    @Body() body: { amount: number },
+  ): Promise<void> {
+    if (body.amount <= 0) {
+      throw new BadRequestException('Deposit amount must be greater than zero');
+    }
+    await this.usersService.deposit(userId, body.amount);
+    return;
+  }
+
   @ApiOperation({ summary: 'Get user by ID' })
   @ApiResponse({ status: 200, description: 'Returns the user data.' })
   @ApiResponse({ status: 404, description: 'User not found.' })

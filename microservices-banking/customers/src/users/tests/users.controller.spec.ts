@@ -16,7 +16,6 @@ describe('UsersController (e2e)', () => {
   let usersService: Partial<UsersService>;
 
   beforeAll(async () => {
-    // Cria mocks para os métodos utilizados pelo controller
     usersService = {
       createUser: jest.fn().mockResolvedValue(undefined),
       getUserById: jest.fn().mockResolvedValue({
@@ -31,6 +30,7 @@ describe('UsersController (e2e)', () => {
       }),
       updateUser: jest.fn().mockResolvedValue(undefined),
       updateProfilePicture: jest.fn().mockResolvedValue(undefined),
+      deposit: jest.fn().mockResolvedValue(undefined),
     };
 
     // Cria o módulo de teste incluindo todas as dependências necessárias
@@ -83,6 +83,13 @@ describe('UsersController (e2e)', () => {
           updatedAt: expect.any(String),
         });
       });
+  });
+
+  it('/api/users/:userId/deposit (POST) - should deposit money into user account', async () => {
+    return request(app.getHttpServer())
+      .post('/api/users/123/deposit')
+      .send({ amount: 100 })
+      .expect(204);
   });
 
   it('/api/users/:userId (PATCH) - should update user', () => {
