@@ -7,6 +7,8 @@ import {
   Body,
   UseInterceptors,
   UploadedFile,
+  HttpStatus,
+  HttpCode,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiResponse, ApiTags, ApiOperation } from '@nestjs/swagger';
@@ -27,6 +29,7 @@ export class UsersController {
     status: 201,
     description: 'The user has been successfully created.',
   })
+  @HttpCode(HttpStatus.NO_CONTENT)
   @ApiResponse({ status: 400, description: 'Bad Request' })
   @ApiResponse({ status: 500, description: 'Internal Server Error' })
   @Post()
@@ -34,7 +37,7 @@ export class UsersController {
   async createUser(
     @Body() body: any,
     @UploadedFile() file: Express.Multer.File,
-  ): Promise<User> {
+  ): Promise<void> {
     if (file) {
       console.log(`Received file: ${file.originalname}`);
     }
@@ -44,7 +47,9 @@ export class UsersController {
       bankingDetails: body.bankingDetails,
     });
 
-    return this.usersService.createUser(createUserDto, file);
+    await this.usersService.createUser(createUserDto, file);
+
+    return;
   }
 
   @ApiOperation({ summary: 'Get user by ID' })
@@ -61,6 +66,7 @@ export class UsersController {
     status: 200,
     description: 'The user has been successfully updated.',
   })
+  @HttpCode(HttpStatus.NO_CONTENT)
   @ApiResponse({ status: 400, description: 'Bad Request' })
   @ApiResponse({ status: 404, description: 'User not found' })
   @ApiResponse({ status: 500, description: 'Internal Server Error' })
@@ -68,8 +74,9 @@ export class UsersController {
   async updateUser(
     @Param('userId') userId: string,
     @Body() updateUserDto: UpdateUserDto,
-  ): Promise<User> {
-    return this.usersService.updateUser(userId, updateUserDto);
+  ): Promise<void> {
+    await this.usersService.updateUser(userId, updateUserDto);
+    return;
   }
 
   @ApiOperation({ summary: 'Update profile picture by ID' })
@@ -77,6 +84,7 @@ export class UsersController {
     status: 200,
     description: 'The profile picture has been successfully updated.',
   })
+  @HttpCode(HttpStatus.NO_CONTENT)
   @ApiResponse({ status: 400, description: 'Bad Request' })
   @ApiResponse({ status: 404, description: 'User not found' })
   @ApiResponse({ status: 500, description: 'Internal Server Error' })
@@ -85,7 +93,8 @@ export class UsersController {
   async updateProfilePicture(
     @Param('userId') userId: string,
     @UploadedFile() file: Express.Multer.File,
-  ): Promise<User> {
-    return this.usersService.updateProfilePicture(userId, file);
+  ): Promise<void> {
+    await this.usersService.updateProfilePicture(userId, file);
+    return;
   }
 }

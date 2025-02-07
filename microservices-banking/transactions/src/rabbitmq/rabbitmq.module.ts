@@ -9,7 +9,7 @@ import { RabbitmqService } from './rabbitmq.service';
     RabbitMQModule.forRoot(RabbitMQModule, {
       exchanges: [
         {
-          name: 'amq.direct',
+          name: 'user-exchange',
           type: 'direct',
         },
       ],

@@ -3,7 +3,9 @@ import { RabbitmqModule } from './rabbitmq/rabbitmq.module';
 import { TransactionModule } from './transaction/transaction.module';
 import { RabbitMQModule } from '@golevelup/nestjs-rabbitmq';
 import { RabbitmqService } from './rabbitmq/rabbitmq.service';
-// etc.
+import { RabbitMQServiceMock } from './utils/mocks/rabbitmq.service.mock';
+
+const isTestEnvironment = process.env.NODE_ENV === 'test';
 
 @Module({
   imports: [
@@ -11,13 +13,14 @@ import { RabbitmqService } from './rabbitmq/rabbitmq.service';
     RabbitMQModule.forRoot(RabbitMQModule, {
       exchanges: [
         {
-          name: 'amq.direct',
+          name: 'user-exchange',
           type: 'direct',
         },
       ],
       uri:
         `${process.env.URI_RABBITMQ_LOCAL} ` ||
         'amqp://guest:guest@rabbitmq:5672',
+      enableControllerDiscovery: !isTestEnvironment,
     }),
     TransactionModule,
   ],
@@ -25,7 +28,7 @@ import { RabbitmqService } from './rabbitmq/rabbitmq.service';
   providers: [
     {
       provide: RabbitmqService,
-      useClass: RabbitmqService,
+      useClass: isTestEnvironment ? RabbitMQServiceMock : RabbitmqService,
     },
   ],
 })

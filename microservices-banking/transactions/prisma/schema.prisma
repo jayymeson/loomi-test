@@ -18,8 +18,8 @@ model User {
   id        String   @id
   name      String
   email     String
-  agency    String?
-  account   String?
+  agency    String
+  account   String
   
   sentTransactions     Transaction[] @relation("SenderUser")
   receivedTransactions Transaction[] @relation("ReceiverUser")
