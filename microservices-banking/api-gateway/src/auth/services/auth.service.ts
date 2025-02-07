@@ -2,6 +2,7 @@ import * as jwt from 'jsonwebtoken';
 import * as bcrypt from 'bcryptjs';
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { UsersService } from 'src/customer/modules/services/user.service';
+import { User } from 'src/customer/interface/user.interface';
 
 export interface JwtPayload {
   sub: string;
@@ -31,7 +32,10 @@ export class AuthService {
     }
   }
 
-  async validateUserCredentials(email: string, password: string): Promise<any> {
+  async validateUserCredentials(
+    email: string,
+    password: string,
+  ): Promise<User | null> {
     try {
       const user = await this.usersService.findByEmail(email);
 

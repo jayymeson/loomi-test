@@ -8,7 +8,7 @@ import {
 } from 'class-validator';
 
 export class CreateTransactionDto {
-  @ApiProperty({ example: 'uuid-sender' })
+  @ApiProperty({ example: 'extracted from the token' })
   @IsNotEmpty()
   @IsUUID()
   senderUserId: string;
