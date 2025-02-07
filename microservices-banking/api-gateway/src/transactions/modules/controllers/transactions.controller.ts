@@ -43,7 +43,7 @@ export class TransactionsController {
   async getTransactionById(
     @Param('transactionId') transactionId: string,
   ): Promise<Transaction> {
-    return this.transactionsService.getTransactionById(transactionId);
+    return await this.transactionsService.getTransactionById(transactionId);
   }
 
   @ApiOperation({ summary: 'Get transactions for current user' })
@@ -52,7 +52,7 @@ export class TransactionsController {
   async getTransactionsByUserId(
     @GetUser('sub') userId: string,
   ): Promise<Transaction[]> {
-    return this.transactionsService.getTransactionsByUserId(userId);
+    return await this.transactionsService.getTransactionsByUserId(userId);
   }
 
   @ApiOperation({ summary: 'Cancel a pending transaction' })

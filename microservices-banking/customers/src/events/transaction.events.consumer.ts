@@ -2,6 +2,7 @@ import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { RabbitSubscribe } from '@golevelup/nestjs-rabbitmq';
 import { PrismaService } from '../prisma/prisma.service';
 import { RabbitmqRoutingKeys } from 'src/rabbitmq/enum/rabbitmq-events.enum';
+import { TransactionPayload } from 'src/users/interface/user-payload.interface';
 
 @Injectable()
 export class TransactionEventsConsumer {
@@ -15,21 +16,32 @@ export class TransactionEventsConsumer {
     queue: RabbitmqRoutingKeys.USER_TRANSACTION_COMPLETED,
     createQueueIfNotExists: true,
   })
-  public async handleTransactionCompleted(transactionPayload: any) {
+  public async handleTransactionCompleted(
+    transactionPayload: TransactionPayload,
+  ) {
     this.logger.log(
       `Event received [transaction.completed]: ${JSON.stringify(transactionPayload)}`,
     );
 
-    const { senderUserId, receiverUserId, amount } = transactionPayload;
+    const { amount, receiverUserId, senderUserId } = transactionPayload;
 
-    if (!senderUserId || !receiverUserId || !amount || amount <= 0) {
-      this.logger.error(
-        `Invalid transaction event: sender=${senderUserId}, receiver=${receiverUserId}, amount=${amount}`,
-      );
-      return;
+    const foundSender = await this.prisma.user.findFirst({
+      where: { id: senderUserId },
+    });
+
+    const foundReceiver = await this.prisma.user.findFirst({
+      where: { id: receiverUserId },
+    });
+
+    if (!foundSender) {
+      throw new NotFoundException(`Sender user not found: ${senderUserId}`);
     }
 
-    const sender = await this.prisma.user.update({
+    if (!foundReceiver) {
+      throw new NotFoundException(`Receiver user not found: ${receiverUserId}`);
+    }
+
+    await this.prisma.user.update({
       where: { id: senderUserId },
       data: {
         balance: {
@@ -38,12 +50,7 @@ export class TransactionEventsConsumer {
       },
     });
 
-    if (!sender) {
-      this.logger.error(`Sender user not found: ID ${senderUserId}`);
-      throw new NotFoundException(`Sender user not found: ${senderUserId}`);
-    }
-
-    const receiver = await this.prisma.user.update({
+    await this.prisma.user.update({
       where: { id: receiverUserId },
       data: {
         balance: {
@@ -52,13 +59,8 @@ export class TransactionEventsConsumer {
       },
     });
 
-    if (!receiver) {
-      this.logger.error(`Receiver user not found: ID ${receiverUserId}`);
-      throw new NotFoundException(`Receiver user not found: ${receiverUserId}`);
-    }
-
     this.logger.log(
-      `Transaction completed: Sender ${senderUserId} -${amount}, Receiver ${receiverUserId} +${amount}`,
+      `Transaction completed: Sender ${senderUserId} - ${amount}, Receiver ${receiverUserId} +${amount}`,
     );
   }
 
