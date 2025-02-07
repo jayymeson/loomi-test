@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { UsersRepository } from '../../repositories/users.repository';
+import { UsersRepository } from '../repositories/users.repository';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateUserDto } from '../dto/create-user.dto';
 import { User } from '../interface/user.interface';
@@ -71,6 +71,7 @@ describe('UsersService', () => {
       const createUserDto: CreateUserDto = {
         name: 'John Doe',
         email: 'john.doe@example.com',
+        password: 'P@ssw0rd!',
         address: '123 Main St',
         bankingDetails: {
           agency: '1234',

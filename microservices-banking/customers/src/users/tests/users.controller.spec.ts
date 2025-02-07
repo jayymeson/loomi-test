@@ -56,6 +56,7 @@ describe('UsersController (e2e)', () => {
       .post('/api/users')
       .field('name', 'John Doe')
       .field('email', 'john.doe@example.com')
+      .field('password', 'P@ssw0rd!')
       .field('address', '123 Main St')
       .field(
         'bankingDetails',

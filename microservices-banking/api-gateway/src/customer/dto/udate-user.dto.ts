@@ -12,18 +12,20 @@ class BankingDetailsDto {
   account: string;
 }
 
-export class CreateUserDto {
-  @ApiProperty({ example: 'John Doe' })
+export class UpdateUserDto {
+  @ApiProperty({ example: 'John Doe', required: false })
+  @IsOptional()
   @IsString()
-  name: string;
+  name?: string;
 
-  @ApiProperty({ example: 'john.doe@example.com' })
+  @ApiProperty({ example: 'john.doe@example.com', required: false })
+  @IsOptional()
   @IsEmail()
-  email: string;
+  email?: string;
 
   @ApiProperty({ example: 'P@ssw0rd!', description: 'User password' })
-  @IsString()
-  password: string;
+  @IsOptional()
+  password?: string;
 
   @ApiProperty({ example: '123 Main St', required: false })
   @IsOptional()
@@ -32,14 +34,10 @@ export class CreateUserDto {
 
   @ApiProperty({
     example: { agency: '1234', account: '56789' },
-    required: true,
+    required: false,
   })
+  @IsOptional()
   @ValidateNested()
   @Type(() => BankingDetailsDto)
-  bankingDetails: BankingDetailsDto;
-
-  @ApiProperty({ example: 'https://example.com/profile.jpg', required: false })
-  @IsOptional()
-  @IsString()
-  profilePicture?: string;
+  bankingDetails?: BankingDetailsDto;
 }
