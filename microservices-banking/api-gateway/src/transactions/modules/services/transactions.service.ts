@@ -24,12 +24,14 @@ export class TransactionsService {
       const response = await firstValueFrom(
         this.http.get(`${MICROSERVICES.TRANSACTIONS}/${transactionId}`),
       );
-      return response.data;
-    } catch (error) {
-      if (error.response?.status === 404) {
+
+      if (!response.data) {
         throw new NotFoundException('Transaction not found');
       }
-      throw new HttpException(error.response?.data, error.response?.status);
+
+      return response.data;
+    } catch (error) {
+      throw error;
     }
   }
 

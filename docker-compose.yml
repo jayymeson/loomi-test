@@ -18,9 +18,9 @@ services:
     image: postgres:13
     container_name: postgres-transactions
     environment:
-      POSTGRES_USER: "transactions_user"
-      POSTGRES_PASSWORD: "transactions_password"
-      POSTGRES_DB: "transactions_db"
+      POSTGRES_USER: ${POSTGRES_TRANSACTIONS_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_TRANSACTIONS_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_TRANSACTIONS_DB}    
     ports:
       - 5432:5432
     volumes:
@@ -33,10 +33,9 @@ services:
     image: postgres:13
     container_name: postgres-customers
     environment:
-      POSTGRES_USER: "customers_user"
-      POSTGRES_PASSWORD: "customers_password"
-      POSTGRES_DB: "customers_db"
-
+      POSTGRES_USER: ${POSTGRES_CUSTOMERS_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_CUSTOMERS_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_CUSTOMERS_DB}
     ports:
       - 5433:5432
     volumes:

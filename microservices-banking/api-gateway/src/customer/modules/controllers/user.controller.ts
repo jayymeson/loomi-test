@@ -58,6 +58,7 @@ export class UsersController {
       properties: {
         name: { type: 'string', example: 'John Doe' },
         email: { type: 'string', example: 'john@example.com' },
+        password: { type: 'string', example: 'Abc1234*' },
         address: { type: 'string', example: '123 Main St' },
         bankingDetails: {
           type: 'object',
@@ -100,7 +101,6 @@ export class UsersController {
   @ApiOperation({ summary: 'Get current user data' })
   @ApiResponse({ status: 200, description: 'Returns the user data.' })
   @ApiResponse({ status: 404, description: 'User not found.' })
-  @ApiResponse({ status: 500, description: 'Internal Server Error' })
   @Get()
   async getUserById(@GetUser('sub') userId: string): Promise<User> {
     return this.usersService.getUserById(userId);
