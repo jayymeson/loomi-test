@@ -91,6 +91,16 @@ export class TransactionsRepository {
     });
   }
 
+  async updateTransactionStatus(
+    transactionId: string,
+    status: string,
+  ): Promise<void> {
+    await this.prisma.transaction.update({
+      where: { id: transactionId },
+      data: { status },
+    });
+  }
+
   async findByUserId(userId: string): Promise<Transaction[]> {
     return this.prisma.transaction.findMany({
       where: {

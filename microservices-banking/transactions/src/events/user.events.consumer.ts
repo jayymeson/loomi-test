@@ -1,6 +1,7 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { RabbitSubscribe } from '@golevelup/nestjs-rabbitmq';
 import { PrismaService } from '../prisma/prisma.service';
+import { RabbitmqRoutingKeys } from 'src/rabbitmq/enum/rabbitmq-events.enum';
 
 @Injectable()
 export class UserEventsConsumer {
@@ -9,9 +10,9 @@ export class UserEventsConsumer {
   constructor(private readonly prisma: PrismaService) {}
 
   @RabbitSubscribe({
-    exchange: 'user-exchange',
-    routingKey: 'user.created',
-    queue: 'transaction-user-created',
+    exchange: RabbitmqRoutingKeys.USER_EXCHANGE,
+    routingKey: RabbitmqRoutingKeys.USER_CREATED,
+    queue: RabbitmqRoutingKeys.TRASACTION_USER_CREATED,
     createQueueIfNotExists: true,
   })
   public async handleUserCreated(userPayload: any) {
@@ -21,6 +22,7 @@ export class UserEventsConsumer {
 
     const { id, name, email, bankingDetails } = userPayload;
 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const user = await this.prisma.user.upsert({
       where: { id },
       update: {
