@@ -1,30 +1,27 @@
-import {
-  Controller,
-  Post,
-  Delete,
-  Body,
-  Param,
-  Req,
-  UseGuards,
-} from '@nestjs/common';
-import { Roles } from 'src/decorator/decorator.roles';
-import { JwtAuthGuard } from '../guard/jwt-auth.guard';
-import { TransactionsService } from 'src/transactions/modules/services/transactions.service';
+import { Controller, Post, Body, UnauthorizedException } from '@nestjs/common';
+import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import { AuthService } from '../services/auth.service';
+import { LoginDto } from '../dto/login.dto';
+import { Public } from 'src/decorator/decorator.public';
+@ApiTags('auth')
+@Controller('auth')
+export class AuthController {
+  constructor(private readonly authService: AuthService) {}
 
-@Controller('transactions')
-@UseGuards(JwtAuthGuard)
-export class TransactionsController {
-  constructor(private readonly transactionsService: TransactionsService) {}
+  @Public()
+  @Post('login')
+  @ApiOperation({ summary: 'Authenticate user and return JWT token' })
+  async login(@Body() loginDto: LoginDto) {
+    const user = await this.authService.validateUserCredentials(
+      loginDto.email,
+      loginDto.password,
+    );
 
-  @Post()
-  @Roles('USER', 'ADMIN')
-  createTransaction(@Body() createDto, @Req() req) {
-    return this.transactionsService.createTransaction(createDto, req.user);
-  }
+    if (!user) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
 
-  @Delete(':id')
-  @Roles('ADMIN')
-  cancelTransaction(@Param('id') id: string, @Req() req) {
-    return this.transactionsService.cancelTransaction(id, req.user);
+    const token = await this.authService.generateToken(user);
+    return { token };
   }
 }

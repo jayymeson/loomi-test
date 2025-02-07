@@ -4,7 +4,6 @@ import { firstValueFrom } from 'rxjs';
 import { MICROSERVICES } from 'src/config/services';
 import { CreateUserDto } from 'src/customer/dto/create-user.dto';
 import * as admin from 'firebase-admin';
-import { v4 as uuidv4 } from 'uuid';
 import { UpdateUserDto } from 'src/customer/dto/udate-user.dto';
 import { User } from 'src/customer/interface/user.interface';
 import * as FormData from 'form-data';
@@ -23,24 +22,12 @@ export class UsersService {
     }
   }
 
-  async createUser(body: CreateUserDto, file?: Express.Multer.File) {
+  async createUser(body: CreateUserDto) {
     try {
-      if (file) {
-        const bucket = admin.storage().bucket();
-        const filename = `${uuidv4()}_${file.originalname}`;
-        const fileUpload = bucket.file(filename);
-
-        await fileUpload.save(file.buffer, {
-          metadata: { contentType: file.mimetype },
-        });
-
-        const profilePicture = `https://storage.googleapis.com/${bucket.name}/${filename}`;
-        body.profilePicture = profilePicture;
-      }
-
       const response = await firstValueFrom(
         this.http.post(`${MICROSERVICES.USERS}`, body),
       );
+
       return response.data;
     } catch (error) {
       throw new HttpException(error.response?.data, error.response?.status);
@@ -62,6 +49,20 @@ export class UsersService {
     } catch (error) {
       if (error.response?.status === 404) {
         throw new NotFoundException('User not found');
+      }
+      throw new HttpException(error.response?.data, error.response?.status);
+    }
+  }
+
+  async findByEmail(email: string): Promise<User> {
+    try {
+      const response = await firstValueFrom(
+        this.http.get(`${MICROSERVICES.USERS}/email/${email}`),
+      );
+      return response.data;
+    } catch (error) {
+      if (error.response?.status === 404) {
+        throw new NotFoundException(`User not found with email: ${email}`);
       }
       throw new HttpException(error.response?.data, error.response?.status);
     }

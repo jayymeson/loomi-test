@@ -3,8 +3,6 @@ import {
   Post,
   Get,
   Body,
-  Param,
-  UseGuards,
   UploadedFile,
   UseInterceptors,
   HttpStatus,
@@ -13,8 +11,7 @@ import {
   BadRequestException,
   Logger,
 } from '@nestjs/common';
-import { JwtAuthGuard } from 'src/auth/guard/jwt-auth.guard';
-import { UsersService } from '../services/customers.service';
+import { UsersService } from '../services/user.service';
 import { CreateUserDto } from 'src/customer/dto/create-user.dto';
 import { Public } from 'src/decorator/decorator.public';
 import {
@@ -27,6 +24,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { Express } from 'express';
 import { UpdateUserDto } from 'src/customer/dto/udate-user.dto';
 import { User } from 'src/customer/interface/user.interface';
+import { GetUser } from 'src/decorator/get-user.decorator';
 
 @Controller('users')
 export class UsersController {
@@ -53,8 +51,6 @@ export class UsersController {
   })
   @HttpCode(HttpStatus.CREATED)
   @Post()
-  @UseInterceptors(FileInterceptor('profilePicture'))
-  @ApiConsumes('multipart/form-data')
   @ApiBody({
     description: 'User data with an optional profile picture file',
     schema: {
@@ -77,28 +73,22 @@ export class UsersController {
       },
     },
   })
-  async createUser(
-    @Body() body: CreateUserDto,
-    @UploadedFile() file?: Express.Multer.File,
-  ): Promise<void> {
-    if (file) {
-      this.logger.log(
-        `[UsersController] [createUser] Received file: ${file.originalname}`,
-      );
-    }
+  async createUser(@Body() body: CreateUserDto): Promise<void> {
+    this.logger.log(
+      `[UsersController] [createUser] Received data: ${JSON.stringify(body)}`,
+    );
 
-    await this.usersService.createUser(body, file);
+    await this.usersService.createUser(body);
     return;
   }
 
-  @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Deposit money into user account' })
   @ApiResponse({ status: 200, description: 'Deposit successful' })
   @ApiResponse({ status: 400, description: 'Invalid deposit amount' })
   @HttpCode(HttpStatus.NO_CONTENT)
-  @Post(':userId/deposit')
+  @Post('deposit')
   async deposit(
-    @Param('userId') userId: string,
+    @GetUser('sub') userId: string,
     @Body() body: { amount: number },
   ): Promise<void> {
     if (body.amount <= 0) {
@@ -107,42 +97,39 @@ export class UsersController {
     await this.usersService.deposit(userId, body.amount);
   }
 
-  @UseGuards(JwtAuthGuard)
-  @ApiOperation({ summary: 'Get user by ID' })
+  @ApiOperation({ summary: 'Get current user data' })
   @ApiResponse({ status: 200, description: 'Returns the user data.' })
   @ApiResponse({ status: 404, description: 'User not found.' })
   @ApiResponse({ status: 500, description: 'Internal Server Error' })
-  @Get(':userId')
-  async getUserById(@Param('userId') userId: string): Promise<User> {
+  @Get()
+  async getUserById(@GetUser('sub') userId: string): Promise<User> {
     return this.usersService.getUserById(userId);
   }
 
-  @UseGuards(JwtAuthGuard)
-  @ApiOperation({ summary: 'Update user by ID' })
+  @ApiOperation({ summary: 'Update current user' })
   @ApiResponse({ status: 200, description: 'User successfully updated.' })
   @ApiResponse({ status: 400, description: 'Bad Request.' })
   @ApiResponse({ status: 404, description: 'User not found.' })
   @ApiResponse({ status: 500, description: 'Internal Server Error' })
   @HttpCode(HttpStatus.NO_CONTENT)
-  @Patch(':userId')
+  @Patch('update')
   async updateUser(
-    @Param('userId') userId: string,
+    @GetUser('sub') userId: string,
     @Body() updateUserDto: UpdateUserDto,
   ): Promise<void> {
     await this.usersService.updateUser(userId, updateUserDto);
   }
 
-  @UseGuards(JwtAuthGuard)
-  @ApiOperation({ summary: 'Update a users profile picture' })
+  @ApiOperation({ summary: 'Update current user profile picture' })
   @ApiResponse({
     status: 200,
     description: 'Profile picture updated successfully.',
   })
   @ApiResponse({ status: 400, description: 'Bad Request.' })
   @ApiResponse({ status: 404, description: 'User not found.' })
-  @ApiResponse({ status: 500, description: 'Erro interno.' })
+  @ApiResponse({ status: 500, description: 'Internal Server Error' })
   @HttpCode(HttpStatus.NO_CONTENT)
-  @Patch(':userId/profile-picture')
+  @Patch('profile-picture')
   @UseInterceptors(FileInterceptor('profilePicture'))
   @ApiConsumes('multipart/form-data')
   @ApiBody({
@@ -158,7 +145,7 @@ export class UsersController {
     },
   })
   async updateProfilePicture(
-    @Param('userId') userId: string,
+    @GetUser('sub') userId: string,
     @UploadedFile() file?: Express.Multer.File,
   ): Promise<void> {
     if (!file) {
@@ -166,7 +153,6 @@ export class UsersController {
         'You need to upload a file to update your profile picture.',
       );
     }
-
     await this.usersService.updateProfilePicture(userId, file);
     return;
   }

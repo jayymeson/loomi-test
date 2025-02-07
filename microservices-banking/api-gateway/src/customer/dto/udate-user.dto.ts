@@ -23,6 +23,10 @@ export class UpdateUserDto {
   @IsEmail()
   email?: string;
 
+  @ApiProperty({ example: 'P@ssw0rd!', description: 'User password' })
+  @IsOptional()
+  password?: string;
+
   @ApiProperty({ example: '123 Main St', required: false })
   @IsOptional()
   @IsString()
