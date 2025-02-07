@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { UsersRepository } from '../../repositories/users.repository';
+import { UsersRepository } from '../repositories/users.repository';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateUserDto } from '../dto/create-user.dto';
 import { User } from '../interface/user.interface';
