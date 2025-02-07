@@ -1,44 +1,57 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import * as request from 'supertest';
+import * as fs from 'fs';
+import * as path from 'path';
+
+import { UsersController } from '../controllers/users.controller';
 import { UsersService } from '../services/users.service';
-import { CreateUserDto } from '../dto/create-user.dto';
-import { AppModule } from '../../app.module';
-import { RabbitMQServiceMock } from '../../utils/mocks/rabbitmq.service.mock';
 import { RabbitmqService } from '../../rabbitmq/rabbitmq.service';
+import { MetricsService } from 'src/metrics/metrics.service';
 
 jest.setTimeout(20000);
 
 describe('UsersController (e2e)', () => {
   let app: INestApplication;
-  let rabbitMQServiceMock: RabbitMQServiceMock;
-
-  const usersService = {
-    createUser: (dto: CreateUserDto) => ({
-      id: '1',
-      ...dto,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    }),
-  };
+  let usersService: Partial<UsersService>;
 
   beforeAll(async () => {
-    rabbitMQServiceMock = new RabbitMQServiceMock();
+    // Cria mocks para os métodos utilizados pelo controller
+    usersService = {
+      createUser: jest.fn().mockResolvedValue(undefined),
+      getUserById: jest.fn().mockResolvedValue({
+        id: '1',
+        name: 'John Doe',
+        email: 'john.doe@example.com',
+        address: '123 Main St',
+        bankingDetails: { agency: '1234', account: '56789' },
+        profilePicture: 'https://storage.googleapis.com/fake/profile.jpg',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }),
+      updateUser: jest.fn().mockResolvedValue(undefined),
+      updateProfilePicture: jest.fn().mockResolvedValue(undefined),
+    };
 
-    const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [AppModule],
-    })
-      .overrideProvider(UsersService)
-      .useValue(usersService)
-      .overrideProvider(RabbitmqService)
-      .useValue(rabbitMQServiceMock)
-      .compile();
+    // Cria o módulo de teste incluindo todas as dependências necessárias
+    const module: TestingModule = await Test.createTestingModule({
+      controllers: [UsersController],
+      providers: [
+        { provide: UsersService, useValue: usersService },
+        { provide: RabbitmqService, useValue: { publish: jest.fn() } },
+        { provide: MetricsService, useValue: { increment: jest.fn() } }, // Fornecendo MetricsService mockado
+      ],
+    }).compile();
 
-    app = moduleFixture.createNestApplication();
+    // Cria a aplicação a partir do módulo e inicializa-a
+    app = module.createNestApplication();
     await app.init();
   });
 
-  it('/api/users (POST)', () => {
+  it('/api/users (POST) - should create user and return 204 No Content', async () => {
+    const testImagePath = path.resolve(__dirname, 'test-profile-picture.jpg');
+    fs.writeFileSync(testImagePath, Buffer.from('dummy-content'));
+
     return request(app.getHttpServer())
       .post('/api/users')
       .field('name', 'John Doe')
@@ -48,18 +61,21 @@ describe('UsersController (e2e)', () => {
         'bankingDetails',
         JSON.stringify({ agency: '1234', account: '56789' }),
       )
-      .attach('profilePicture', './path/to/profilePicture.jpg') // substitua pelo caminho correto
-      .expect(201)
+      .attach('profilePicture', testImagePath)
+      .expect(204);
+  });
+
+  it('/api/users/:userId (GET) - should return user data', () => {
+    return request(app.getHttpServer())
+      .get('/api/users/1')
+      .expect(200)
       .expect((res) => {
         expect(res.body).toEqual({
           id: '1',
           name: 'John Doe',
           email: 'john.doe@example.com',
           address: '123 Main St',
-          bankingDetails: {
-            agency: '1234',
-            account: '56789',
-          },
+          bankingDetails: { agency: '1234', account: '56789' },
           profilePicture: expect.stringContaining(
             'https://storage.googleapis.com/',
           ),
@@ -69,9 +85,24 @@ describe('UsersController (e2e)', () => {
       });
   });
 
+  it('/api/users/:userId (PATCH) - should update user', () => {
+    return request(app.getHttpServer())
+      .patch('/api/users/1')
+      .send({ name: 'Jane Doe' })
+      .expect(204);
+  });
+
+  it('/api/users/:userId/profile-picture (PATCH) - should update profile picture', () => {
+    const testImagePath = path.resolve(__dirname, 'test-image.jpg');
+    fs.writeFileSync(testImagePath, Buffer.from('dummy-content'));
+
+    return request(app.getHttpServer())
+      .patch('/api/users/1/profile-picture')
+      .attach('profilePicture', testImagePath)
+      .expect(204);
+  });
+
   afterAll(async () => {
-    if (app) {
-      await app.close();
-    }
+    await app.close();
   });
 });

@@ -5,9 +5,10 @@ import { TransactionsRepository } from './repositories/transactions.repository';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { RabbitmqModule } from 'src/rabbitmq/rabbitmq.module';
 import { UserEventsConsumer } from 'src/events/user.events.consumer';
+import { MetricsModule } from 'src/metrics/metrics.module';
 
 @Module({
-  imports: [RabbitmqModule],
+  imports: [RabbitmqModule, MetricsModule],
   controllers: [TransactionsController],
   providers: [
     TransactionsService,
