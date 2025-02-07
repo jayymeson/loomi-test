@@ -4,22 +4,25 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { CreateUserDto } from '../dto/create-user.dto';
 import { User } from '../interface/user.interface';
 import { UsersService } from '../services/users.service';
-import { RabbitMQServiceMock } from '../../utils/mocks/rabbitmq.service.mock';
 import { RabbitmqService } from '../../rabbitmq/rabbitmq.service';
+import { UpdateUserDto } from '../dto/update-user.dto';
+import { ErrorMessages } from '../enum/error.message.enum';
+import * as admin from 'firebase-admin';
+import { Logger } from '@nestjs/common';
 
 describe('UsersService', () => {
   let service: UsersService;
   let repository: UsersRepository;
-  let rabbitMQServiceMock: RabbitMQServiceMock;
+
+  const rabbitmqServiceMock = {
+    publish: jest.fn(),
+  };
 
   beforeEach(async () => {
-    rabbitMQServiceMock = new RabbitMQServiceMock();
-
+    jest.spyOn(Logger.prototype, 'error').mockImplementation(() => {});
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         UsersService,
-        UsersRepository,
-        PrismaService,
         {
           provide: UsersRepository,
           useValue: {
@@ -31,8 +34,9 @@ describe('UsersService', () => {
         },
         {
           provide: RabbitmqService,
-          useValue: rabbitMQServiceMock,
+          useValue: rabbitmqServiceMock,
         },
+        PrismaService,
       ],
     }).compile();
 
@@ -71,6 +75,114 @@ describe('UsersService', () => {
       jest.spyOn(repository, 'create').mockResolvedValue(user);
 
       expect(await service.createUser(createUserDto)).toEqual(user);
+    });
+  });
+
+  describe('getUserById', () => {
+    it('should return the user when found', async () => {
+      const userId = '123';
+      const userExpected: User = {
+        id: userId,
+        name: 'John Doe',
+        email: 'john.doe@example.com',
+        address: '123 Main St',
+        bankingDetails: { agency: '1234', account: '56789' },
+        profilePicture: 'https://example.com/profile.jpg',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      jest.spyOn(repository, 'findById').mockResolvedValue(userExpected);
+      const result = await service.getUserById(userId);
+      expect(result).toEqual(userExpected);
+    });
+
+    it('should log warning if user is not found', async () => {
+      const userId = 'not-found';
+      jest.spyOn(repository, 'findById').mockResolvedValue(null);
+      const result = await service.getUserById(userId);
+      expect(result).toBeNull();
+    });
+  });
+
+  describe('updateUser', () => {
+    it('should update the user and publish event', async () => {
+      const userId = '123';
+      const updateUserDto: UpdateUserDto = { name: 'Jane Doe' };
+
+      const userExpected: User = {
+        id: userId,
+        name: 'Jane Doe',
+        email: 'john.doe@example.com',
+        address: '123 Main St',
+        bankingDetails: { agency: '1234', account: '56789' },
+        profilePicture: 'https://example.com/profile.jpg',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      jest.spyOn(repository, 'update').mockResolvedValue(userExpected);
+
+      const result = await service.updateUser(userId, updateUserDto);
+      expect(result).toEqual(userExpected);
+    });
+  });
+
+  describe('updateProfilePicture', () => {
+    it('should update profile picture when file is provided', async () => {
+      const userId = '123';
+      const file: Express.Multer.File = {
+        fieldname: 'profilePicture',
+        originalname: 'profile.jpg',
+        encoding: '7bit',
+        mimetype: 'image/jpeg',
+        buffer: Buffer.from('dummy-content'),
+        size: 1024,
+        stream: null,
+        destination: '',
+        filename: '',
+        path: '',
+      };
+
+      const fakeUrl = `https://storage.googleapis.com/fake-bucket/fakefile.jpg`;
+      const mockFile = { save: jest.fn().mockResolvedValue(undefined) };
+      const mockBucket = {
+        file: jest.fn().mockReturnValue(mockFile),
+        name: 'fake-bucket',
+      };
+      const adminStorageSpy = jest
+        .spyOn(admin, 'storage')
+        .mockReturnValue({ bucket: () => mockBucket } as any);
+
+      const userExpected: User = {
+        id: userId,
+        name: 'John Doe',
+        email: 'john.doe@example.com',
+        address: '123 Main St',
+        bankingDetails: { agency: '1234', account: '56789' },
+        profilePicture: fakeUrl,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      jest
+        .spyOn(repository, 'updateProfilePicture')
+        .mockResolvedValue(userExpected);
+
+      const result = await service.updateProfilePicture(userId, file);
+      expect(result).toEqual(userExpected);
+      expect(mockBucket.file).toHaveBeenCalled();
+      expect(mockFile.save).toHaveBeenCalledWith(file.buffer, {
+        metadata: { contentType: file.mimetype },
+      });
+
+      adminStorageSpy.mockRestore();
+    });
+
+    it('should throw error when no file provided', async () => {
+      await expect(
+        service.updateProfilePicture('123', undefined),
+      ).rejects.toThrow(ErrorMessages.NO_PICTURE_PROVIDED);
     });
   });
 });

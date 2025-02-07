@@ -9,9 +9,7 @@ export class RabbitmqService {
 
   publish(routingKey: string, data: any) {
     this.logger.log(
-      `📤 Publicando mensagem -> Exchange: user-exchange | RoutingKey: ${routingKey} | Payload: ${JSON.stringify(
-        data,
-      )}`,
+      `[RabbitmqService][publish] Publish Message -> Exchange: user-exchange | RoutingKey: ${routingKey}}`,
     );
 
     this.amqpConnection.publish<any>('user-exchange', routingKey, data);
