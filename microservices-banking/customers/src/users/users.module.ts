@@ -4,9 +4,10 @@ import { UsersService } from './services/users.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { UsersRepository } from './repositories/users.repository';
 import { RabbitmqModule } from 'src/rabbitmq/rabbitmq.module';
+import { MetricsModule } from 'src/metrics/metrics.module';
 
 @Module({
-  imports: [RabbitmqModule],
+  imports: [RabbitmqModule, MetricsModule],
   controllers: [UsersController],
   providers: [UsersService, UsersRepository, PrismaService],
   exports: [UsersService, UsersRepository],
