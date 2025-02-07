@@ -23,9 +23,10 @@ export class TransactionsController {
   @Post()
   async createTransaction(
     @Body() createDto: CreateTransactionDto,
-  ): Promise<Transaction> {
+  ): Promise<void> {
     this.metricsService.increment();
-    return this.transactionsService.createTransaction(createDto);
+    await this.transactionsService.createTransaction(createDto);
+    return;
   }
 
   @ApiOperation({ summary: 'Get transaction by ID' })

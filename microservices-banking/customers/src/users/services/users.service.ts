@@ -3,8 +3,9 @@ import {
   Injectable,
   InternalServerErrorException,
   Logger,
+  NotFoundException,
 } from '@nestjs/common';
-import { UsersRepository } from '../repositories/users.repository';
+import { UsersRepository } from '../../repositories/users.repository';
 import { CreateUserDto } from '../dto/create-user.dto';
 import { UpdateUserDto } from '../dto/update-user.dto';
 import { User } from '../interface/user.interface';
@@ -82,6 +83,34 @@ export class UsersService {
         ErrorMessages.INTERNAL_SERVER_ERROR,
       );
     }
+  }
+
+  /**
+   * Deposits a specified amount to a user's balance.
+   *
+   * @param {string} userId - The ID of the user
+   * @param {number} amount - Amount to deposit
+   */
+  async deposit(userId: string, amount: number): Promise<void> {
+    const user = await this.usersRepository.findById(userId);
+
+    if (!user) {
+      this.logger.warn(
+        `[UsersService] [deposit] User not found with ID: ${userId}`,
+      );
+      throw new NotFoundException('User not found');
+    }
+
+    await this.usersRepository.deposit(userId, amount);
+    const depositPayload = { userId, amount };
+    this.rabbitmqService.publish(
+      RabbitmqRoutingKeys.USER_DEPOSIT,
+      depositPayload,
+    );
+
+    this.logger.log(
+      `[UsersService] [deposit] Deposit successful for user ID: ${userId}`,
+    );
   }
 
   /**
