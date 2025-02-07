@@ -64,4 +64,14 @@ export class TransactionsController {
     this.metricsService.increment();
     await this.transactionsService.cancelTransaction(transactionId);
   }
+
+  @ApiOperation({ summary: 'Get recent transactions' })
+  @ApiResponse({ status: 200, description: 'List of recent transactions' })
+  @Get('recent/:days')
+  async getRecentTransactions(
+    @Param('days') days: number,
+  ): Promise<Transaction[]> {
+    this.metricsService.increment();
+    return this.transactionsService.getRecentTransactions(days);
+  }
 }

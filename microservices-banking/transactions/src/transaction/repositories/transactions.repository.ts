@@ -112,4 +112,24 @@ export class TransactionsRepository {
       },
     });
   }
+
+  async findRecentTransactions(days: number): Promise<Transaction[]> {
+    const dateThreshold = new Date();
+    dateThreshold.setDate(dateThreshold.getDate() - days);
+
+    return this.prisma.transaction.findMany({
+      where: {
+        createdAt: {
+          gte: dateThreshold,
+        },
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+      include: {
+        senderUser: true,
+        receiverUser: true,
+      },
+    });
+  }
 }
