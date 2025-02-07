@@ -28,12 +28,11 @@ export class CreateUserDto {
 
   @ApiProperty({
     example: { agency: '1234', account: '56789' },
-    required: false,
+    required: true,
   })
-  @IsOptional()
   @ValidateNested()
   @Type(() => BankingDetailsDto)
-  bankingDetails?: BankingDetailsDto;
+  bankingDetails: BankingDetailsDto;
 
   @ApiProperty({ example: 'https://example.com/profile.jpg', required: false })
   @IsOptional()

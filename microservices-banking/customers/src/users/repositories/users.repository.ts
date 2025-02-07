@@ -13,8 +13,16 @@ export class UsersRepository {
     return this.prisma.user.create({
       data: {
         ...rest,
-        bankingDetails: bankingDetails ? { create: bankingDetails } : undefined,
+        bankingDetails: bankingDetails
+          ? {
+              create: {
+                agency: bankingDetails.agency,
+                account: bankingDetails.account,
+              },
+            }
+          : undefined,
       },
+      include: { bankingDetails: true },
     });
   }
 
@@ -27,12 +35,21 @@ export class UsersRepository {
 
   async update(userId: string, updateUserDto: UpdateUserDto): Promise<User> {
     const { bankingDetails, ...rest } = updateUserDto;
+
     return this.prisma.user.update({
       where: { id: userId },
       data: {
         ...rest,
-        bankingDetails: bankingDetails ? { update: bankingDetails } : undefined,
+        bankingDetails: bankingDetails
+          ? {
+              update: {
+                agency: bankingDetails.agency,
+                account: bankingDetails.account,
+              },
+            }
+          : undefined,
       },
+      include: { bankingDetails: true },
     });
   }
 
@@ -40,9 +57,16 @@ export class UsersRepository {
     userId: string,
     profilePicture: string,
   ): Promise<User> {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+
+    if (!user) {
+      throw new Error(`Usuário com ID ${userId} não encontrado.`);
+    }
+
     return this.prisma.user.update({
       where: { id: userId },
       data: { profilePicture },
+      include: { bankingDetails: true },
     });
   }
 }

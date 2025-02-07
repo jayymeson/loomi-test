@@ -1,9 +1,9 @@
 import { Module } from '@nestjs/common';
 import { RabbitmqModule } from './rabbitmq/rabbitmq.module';
-import { RabbitMQModule } from '@golevelup/nestjs-rabbitmq';
 import { UsersModule } from './users/users.module';
 import { RabbitmqService } from './rabbitmq/rabbitmq.service';
 import { RabbitMQServiceMock } from './utils/mocks/rabbitmq.service.mock';
+import { RabbitMQModule } from '@golevelup/nestjs-rabbitmq';
 
 const isTestEnvironment = process.env.NODE_ENV === 'test';
 
@@ -13,7 +13,7 @@ const isTestEnvironment = process.env.NODE_ENV === 'test';
     RabbitMQModule.forRoot(RabbitMQModule, {
       exchanges: [
         {
-          name: 'amq.direct',
+          name: 'user-exchange',
           type: 'direct',
         },
       ],
