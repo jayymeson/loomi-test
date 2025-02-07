@@ -1,13 +1,17 @@
-import { Controller, Get, Post, Param, Body } from '@nestjs/common';
+import { Controller, Get, Post, Param, Body, Patch } from '@nestjs/common';
 import { ApiTags, ApiResponse, ApiOperation } from '@nestjs/swagger';
 import { CreateTransactionDto } from '../dto/create-transaction.dto';
 import { Transaction } from '@prisma/client';
 import { TransactionsService } from '../service/transactions.service';
+import { MetricsService } from 'src/metrics/metrics.service';
 
 @ApiTags('transactions')
 @Controller('api/transactions')
 export class TransactionsController {
-  constructor(private readonly transactionsService: TransactionsService) {}
+  constructor(
+    private readonly transactionsService: TransactionsService,
+    private readonly metricsService: MetricsService,
+  ) {}
 
   @ApiOperation({ summary: 'Create a new transaction' })
   @ApiResponse({
@@ -19,8 +23,10 @@ export class TransactionsController {
   @Post()
   async createTransaction(
     @Body() createDto: CreateTransactionDto,
-  ): Promise<Transaction> {
-    return this.transactionsService.createTransaction(createDto);
+  ): Promise<void> {
+    this.metricsService.increment();
+    await this.transactionsService.createTransaction(createDto);
+    return;
   }
 
   @ApiOperation({ summary: 'Get transaction by ID' })
@@ -30,6 +36,7 @@ export class TransactionsController {
   async getTransactionById(
     @Param('transactionId') transactionId: string,
   ): Promise<Transaction> {
+    this.metricsService.increment();
     return this.transactionsService.getTransactionById(transactionId);
   }
 
@@ -39,6 +46,32 @@ export class TransactionsController {
   async getTransactionsByUserId(
     @Param('userId') userId: string,
   ): Promise<Transaction[]> {
+    this.metricsService.increment();
     return this.transactionsService.getTransactionsByUserId(userId);
+  }
+
+  @ApiOperation({ summary: 'Cancel a pending transaction' })
+  @ApiResponse({
+    status: 200,
+    description: 'Transaction canceled successfully',
+  })
+  @ApiResponse({ status: 404, description: 'Transaction not found' })
+  @ApiResponse({ status: 422, description: 'Transaction cannot be canceled' })
+  @Patch(':transactionId/cancel')
+  async cancelTransaction(
+    @Param('transactionId') transactionId: string,
+  ): Promise<void> {
+    this.metricsService.increment();
+    await this.transactionsService.cancelTransaction(transactionId);
+  }
+
+  @ApiOperation({ summary: 'Get recent transactions' })
+  @ApiResponse({ status: 200, description: 'List of recent transactions' })
+  @Get('recent/:days')
+  async getRecentTransactions(
+    @Param('days') days: number,
+  ): Promise<Transaction[]> {
+    this.metricsService.increment();
+    return this.transactionsService.getRecentTransactions(days);
   }
 }

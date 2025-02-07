@@ -89,8 +89,42 @@ services:
       - rabbitmq
     ports:
       - 3002:3002
-    volumes:
+    environment:
+      - USER_MS=customers:3001
+      - TRANSACTION_MS=transactions:3000
+    volumes:  
       - ./microservices-banking/api-gateway:/usr/src/app
       - /usr/src/app/node_modules
     env_file:
       - ./microservices-banking/api-gateway/.env
+
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"
+    restart: always
+    networks:
+      - monitoring
+
+  grafana:
+    image: grafana/grafana:10.0.3
+    container_name: grafana
+    ports:
+      - "3010:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - grafana_data:/var/lib/grafana
+    restart: always
+    networks:
+      - monitoring
+
+networks:
+  monitoring:
+
+volumes:
+  grafana_data:

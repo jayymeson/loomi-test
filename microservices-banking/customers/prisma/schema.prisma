@@ -18,9 +18,11 @@ model User {
   id             String           @id @default(uuid())
   name           String
   email          String           @unique
+  password       String
   address        String?
   bankingDetails BankingDetails?
   profilePicture String?
+  balance        Decimal @default(0.00) @db.Decimal(10,2)
   createdAt      DateTime         @default(now())
   updatedAt      DateTime         @updatedAt
 }

@@ -19,6 +19,11 @@ export class RabbitMQServiceMock {
     return Promise.resolve();
   }
 
+  async publish(routingKey: string, data: any) {
+    this.messages.push({ queue: routingKey, message: data });
+    return Promise.resolve();
+  }
+
   clearMessages() {
     this.messages = [];
   }

@@ -3,7 +3,7 @@ export interface User {
   name: string;
   email: string;
   address?: string;
-  bankingDetails?: {
+  bankingDetails: {
     agency: string;
     account: string;
   };
