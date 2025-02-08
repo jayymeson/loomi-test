@@ -17,6 +17,7 @@ import { RabbitmqService } from 'src/rabbitmq/rabbitmq.service';
 import { ErrorMessages } from '../enum/error.message.enum';
 import { RabbitmqRoutingKeys } from 'src/rabbitmq/enum/rabbitmq-events.enum';
 import * as bcrypt from 'bcrypt';
+import { DepositDto } from '../dto/create-deposit.dto';
 
 @Injectable()
 export class UsersService {
@@ -105,9 +106,11 @@ export class UsersService {
    * Deposits a specified amount to a user's balance.
    *
    * @param {string} userId - The ID of the user
-   * @param {number} amount - Amount to deposit
+   * @param {DepositDto} depositDto - DTO Deposit
    */
-  async deposit(userId: string, amount: number): Promise<void> {
+  async deposit(userId: string, depositDto: DepositDto): Promise<void> {
+    const { amount } = depositDto;
+
     const user = await this.usersRepository.findById(userId);
 
     if (!user) {

@@ -9,6 +9,9 @@ import { Prisma, Transaction } from '@prisma/client';
 import { TransactionsRepository } from '../repositories/transactions.repository';
 import { RabbitmqService } from 'src/rabbitmq/rabbitmq.service';
 import { RabbitmqRoutingKeys } from 'src/rabbitmq/enum/rabbitmq-events.enum';
+import { InsufficientFundsException } from 'src/exceptions/insufficient-funds.exception';
+import { TransactionNotFoundException } from 'src/exceptions/transaction-not-found.exception';
+import { InvalidTransactionException } from 'src/exceptions/invalid-transaction.exception';
 
 @Injectable()
 export class TransactionsService {
@@ -26,67 +29,61 @@ export class TransactionsService {
    * @param {CreateTransactionDto} dto - DTO containing transaction details
    * @returns {Promise<Transaction>} - Created transaction entity
    * @throws {NotFoundException} If sender or receiver does not exist
-   * @throws {UnprocessableEntityException} If sender has insufficient funds
+   * @throws {InvalidTransactionException} If sender is the same person
+   * @throws {TransactionNotFoundException} If sender not found
    */
   async createTransaction(dto: CreateTransactionDto): Promise<Transaction> {
-    this.logger.log(
-      `[createTransaction] Initiating transaction: ${JSON.stringify(dto)}`,
-    );
+    try {
+      this.logger.log(
+        `[createTransaction] Initiating transaction: ${JSON.stringify(dto)}`,
+      );
 
-    const { sender, receiver } =
-      await this.transactionsRepository.getSenderAndReceiverDetails(
+      if (dto.senderUserId === dto.receiverUserId) {
+        throw new InvalidTransactionException(
+          'Sender and receiver cannot be the same',
+        );
+      }
+
+      await this.validateSenderBalance(dto.senderUserId, dto.amount);
+
+      const { sender, receiver } =
+        await this.transactionsRepository.getSenderAndReceiverDetails(
+          dto.senderUserId,
+          dto.receiverUserId,
+        );
+
+      if (!sender || !receiver) {
+        throw new TransactionNotFoundException(
+          'Sender or Receiver user not found in Transaction Service DB',
+        );
+      }
+
+      const transaction =
+        await this.transactionsRepository.createTransaction(dto);
+
+      await this.transactionsRepository.updateBalances(
         dto.senderUserId,
         dto.receiverUserId,
+        dto.amount,
       );
 
-    if (!sender || !receiver) {
-      this.logger.warn(
-        `[createTransaction] Sender or receiver not found: sender=${dto.senderUserId}, receiver=${dto.receiverUserId}`,
+      this.logger.log(
+        `[createTransaction] Transaction created successfully: ID=${transaction.id}`,
       );
-      throw new NotFoundException(
-        'Sender or Receiver user not found in Transaction Service DB',
+
+      this.rabbitmqService.publish(
+        RabbitmqRoutingKeys.TRANSACTION_COMPLETED,
+        transaction,
       );
+
+      return transaction;
+    } catch (error) {
+      this.logger.error(
+        `[createTransaction] Error: ${error.message}`,
+        error.stack,
+      );
+      throw error;
     }
-
-    if (
-      !sender.balance ||
-      new Prisma.Decimal(sender.balance.balance).toNumber() < dto.amount
-    ) {
-      this.logger.warn(
-        `[createTransaction] Insufficient funds for sender ID: ${dto.senderUserId}`,
-      );
-      throw new UnprocessableEntityException(
-        `Insufficient funds: User ${dto.senderUserId} has balance ${sender.balance?.balance.toNumber()}, required ${dto.amount}`,
-      );
-    }
-
-    this.logger.log(
-      `[createTransaction] Creating transaction from sender=${dto.senderUserId} to receiver=${dto.receiverUserId} amount=${dto.amount}`,
-    );
-
-    const transaction =
-      await this.transactionsRepository.createTransaction(dto);
-
-    await this.transactionsRepository.updateBalances(
-      dto.senderUserId,
-      dto.receiverUserId,
-      dto.amount,
-    );
-
-    this.logger.log(
-      `[createTransaction] Transaction created successfully: ID=${transaction.id}`,
-    );
-
-    this.logger.log(
-      `[createTransaction] Publishing event ${RabbitmqRoutingKeys.TRANSACTION_COMPLETED} to RabbitMQ`,
-    );
-
-    this.rabbitmqService.publish(
-      RabbitmqRoutingKeys.TRANSACTION_COMPLETED,
-      transaction,
-    );
-
-    return transaction;
   }
 
   /**
@@ -183,6 +180,31 @@ export class TransactionsService {
       senderUserId: transaction.senderUserId,
       amount: transaction.amount,
     });
+  }
+
+  private async validateSenderBalance(
+    senderUserId: string,
+    amount: number,
+  ): Promise<void> {
+    try {
+      const sender =
+        await this.transactionsRepository.getUserWithBalance(senderUserId);
+
+      if (
+        !sender?.balance ||
+        new Prisma.Decimal(sender.balance.balance).toNumber() < amount
+      ) {
+        throw new InsufficientFundsException(
+          `Insufficient funds: User ${senderUserId} has balance ${sender.balance?.balance.toNumber()}, required ${amount}`,
+        );
+      }
+    } catch (error) {
+      this.logger.error(
+        `[validateSenderBalance] Error: ${error.message}`,
+        error.stack,
+      );
+      throw error; // Re-lança a exceção personalizada
+    }
   }
 
   /**

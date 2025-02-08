@@ -8,6 +8,8 @@ import {
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { TransactionsService } from '../service/transactions.service';
+import { InsufficientFundsException } from 'src/exceptions/insufficient-funds.exception';
+import { TransactionNotFoundException } from 'src/exceptions/transaction-not-found.exception';
 
 describe('TransactionsService', () => {
   let service: TransactionsService;
@@ -20,6 +22,7 @@ describe('TransactionsService', () => {
     updateTransactionStatus: jest.fn(),
     findByUserId: jest.fn(),
     findRecentTransactions: jest.fn(),
+    getUserWithBalance: jest.fn(),
   };
 
   const mockRabbitmqService = {
@@ -48,8 +51,13 @@ describe('TransactionsService', () => {
         senderUserId: 'senderId',
         receiverUserId: 'receiverId',
         amount: 100,
-        description: 'Transaction test',
+        description: 'Test transaction',
       };
+
+      mockTransactionsRepository.getUserWithBalance.mockResolvedValue({
+        id: 'senderId',
+        balance: { balance: new Prisma.Decimal(500) },
+      });
 
       mockTransactionsRepository.getSenderAndReceiverDetails.mockResolvedValue({
         sender: {
@@ -75,6 +83,9 @@ describe('TransactionsService', () => {
       const result = await service.createTransaction(dto);
 
       expect(
+        mockTransactionsRepository.getUserWithBalance,
+      ).toHaveBeenCalledWith('senderId');
+      expect(
         mockTransactionsRepository.getSenderAndReceiverDetails,
       ).toHaveBeenCalledWith('senderId', 'receiverId');
       expect(mockTransactionsRepository.createTransaction).toHaveBeenCalledWith(
@@ -89,7 +100,7 @@ describe('TransactionsService', () => {
       expect(result.id).toBe('transactionId');
     });
 
-    it('should throw NotFoundException if sender or receiver does not exist', async () => {
+    it('should throw TransactionNotFoundException if sender or receiver does not exist', async () => {
       const dto: CreateTransactionDto = {
         senderUserId: 'senderId',
         receiverUserId: 'receiverId',
@@ -103,11 +114,11 @@ describe('TransactionsService', () => {
       });
 
       await expect(service.createTransaction(dto)).rejects.toThrow(
-        NotFoundException,
+        TransactionNotFoundException,
       );
     });
 
-    it('should throw UnprocessableEntityException if sender has insufficient balance', async () => {
+    it('should throw InsufficientFundsException if sender has insufficient balance', async () => {
       const dto: CreateTransactionDto = {
         senderUserId: 'senderId',
         receiverUserId: 'receiverId',
@@ -115,19 +126,13 @@ describe('TransactionsService', () => {
         description: 'Test',
       };
 
-      mockTransactionsRepository.getSenderAndReceiverDetails.mockResolvedValue({
-        sender: {
-          id: 'senderId',
-          balance: { balance: new Prisma.Decimal(100) },
-        },
-        receiver: {
-          id: 'receiverId',
-          balance: { balance: new Prisma.Decimal(300) },
-        },
+      mockTransactionsRepository.getUserWithBalance.mockResolvedValue({
+        id: 'senderId',
+        balance: { balance: new Prisma.Decimal(100) },
       });
 
       await expect(service.createTransaction(dto)).rejects.toThrow(
-        UnprocessableEntityException,
+        InsufficientFundsException,
       );
     });
   });
@@ -135,15 +140,18 @@ describe('TransactionsService', () => {
   describe('getTransactionById', () => {
     it('should return the transaction if it exists', async () => {
       mockTransactionsRepository.findById.mockResolvedValue({ id: 'transId' });
+
       const result = await service.getTransactionById('transId');
+
       expect(mockTransactionsRepository.findById).toHaveBeenCalledWith(
         'transId',
       );
       expect(result.id).toBe('transId');
     });
 
-    it('should throw NotFoundException if the transaction is not found', async () => {
+    it('should throw NotFoundException if the transaction does not exist', async () => {
       mockTransactionsRepository.findById.mockResolvedValue(null);
+
       await expect(service.getTransactionById('invalidId')).rejects.toThrow(
         NotFoundException,
       );
@@ -151,7 +159,7 @@ describe('TransactionsService', () => {
   });
 
   describe('getTransactionsByUserId', () => {
-    it('should return a list of transactions for a user', async () => {
+    it('should return a list of user transactions', async () => {
       const mockTransactions = [
         {
           id: 't1',
@@ -169,7 +177,9 @@ describe('TransactionsService', () => {
       mockTransactionsRepository.findByUserId.mockResolvedValue(
         mockTransactions,
       );
+
       const result = await service.getTransactionsByUserId('userId');
+
       expect(mockTransactionsRepository.findByUserId).toHaveBeenCalledWith(
         'userId',
       );
@@ -179,7 +189,7 @@ describe('TransactionsService', () => {
   });
 
   describe('cancelTransaction', () => {
-    it('should cancel a pending transaction and revert balance', async () => {
+    it('should cancel a pending transaction and revert balances', async () => {
       const transaction = {
         id: 'tx1',
         senderUserId: 'senderId',
@@ -188,7 +198,9 @@ describe('TransactionsService', () => {
         status: 'PENDING',
       };
       mockTransactionsRepository.findById.mockResolvedValue(transaction);
+
       await service.cancelTransaction('tx1');
+
       expect(mockTransactionsRepository.findById).toHaveBeenCalledWith('tx1');
       expect(mockTransactionsRepository.updateBalances).toHaveBeenCalledWith(
         'senderId',
@@ -208,7 +220,7 @@ describe('TransactionsService', () => {
       );
     });
 
-    it('should throw UnprocessableEntityException if the transaction is not pending', async () => {
+    it('should throw UnprocessableEntityException if the transaction is not PENDING', async () => {
       const transaction = {
         id: 'tx1',
         senderUserId: 'senderId',
@@ -232,7 +244,9 @@ describe('TransactionsService', () => {
       mockTransactionsRepository.findRecentTransactions.mockResolvedValue(
         mockTransactions,
       );
+
       const result = await service.getRecentTransactions(7);
+
       expect(
         mockTransactionsRepository.findRecentTransactions,
       ).toHaveBeenCalledWith(7);
