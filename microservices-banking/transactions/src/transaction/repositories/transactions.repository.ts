@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateTransactionDto } from '../dto/create-transaction.dto';
-import { Prisma, Transaction } from '@prisma/client';
+import { Transaction } from '@prisma/client';
 
 @Injectable()
 export class TransactionsRepository {
@@ -44,40 +44,16 @@ export class TransactionsRepository {
     receiverUserId: string,
     amount: number,
   ): Promise<void> {
-    const senderBalance = await this.prisma.userBalance.findUnique({
-      where: { userId: senderUserId },
-    });
-
-    const receiverBalance = await this.prisma.userBalance.findUnique({
-      where: { userId: receiverUserId },
-    });
-
-    if (!senderBalance) {
-      await this.prisma.userBalance.create({
-        data: {
-          userId: senderUserId,
-          balance: new Prisma.Decimal(0),
-        },
+    await this.prisma.$transaction(async (prisma) => {
+      await prisma.userBalance.update({
+        where: { userId: senderUserId },
+        data: { balance: { decrement: amount } },
       });
-    }
 
-    if (!receiverBalance) {
-      await this.prisma.userBalance.create({
-        data: {
-          userId: receiverUserId,
-          balance: new Prisma.Decimal(0),
-        },
+      await prisma.userBalance.update({
+        where: { userId: receiverUserId },
+        data: { balance: { increment: amount } },
       });
-    }
-
-    await this.prisma.userBalance.update({
-      where: { userId: senderUserId },
-      data: { balance: { decrement: amount } },
-    });
-
-    await this.prisma.userBalance.update({
-      where: { userId: receiverUserId },
-      data: { balance: { increment: amount } },
     });
   }
 
@@ -110,6 +86,13 @@ export class TransactionsRepository {
         senderUser: true,
         receiverUser: true,
       },
+    });
+  }
+
+  async getUserWithBalance(userId: string) {
+    return this.prisma.user.findUnique({
+      where: { id: userId },
+      include: { balance: true },
     });
   }
 

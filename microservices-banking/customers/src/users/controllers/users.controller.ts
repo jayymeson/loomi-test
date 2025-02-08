@@ -28,6 +28,7 @@ import { User } from '../interface/user.interface';
 import { plainToInstance } from 'class-transformer';
 import { Express } from 'express';
 import { MetricsService } from 'src/metrics/metrics.service';
+import { DepositDto } from '../dto/create-deposit.dto';
 
 @ApiTags('users')
 @Controller('api/users')
@@ -103,15 +104,12 @@ export class UsersController {
   @ApiResponse({ status: 400, description: 'Invalid deposit amount' })
   @HttpCode(HttpStatus.NO_CONTENT)
   @Post(':userId/deposit')
+  @HttpCode(HttpStatus.NO_CONTENT)
   async deposit(
     @Param('userId') userId: string,
-    @Body() body: { amount: number },
+    @Body() depositDto: DepositDto,
   ): Promise<void> {
-    if (body.amount <= 0) {
-      throw new BadRequestException('Deposit amount must be greater than zero');
-    }
-    await this.usersService.deposit(userId, body.amount);
-    return;
+    await this.usersService.deposit(userId, depositDto);
   }
 
   @ApiOperation({ summary: 'Get user by ID' })
