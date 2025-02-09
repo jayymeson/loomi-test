@@ -12,7 +12,6 @@ import { TransactionsService } from '../service/transactions.service';
 describe('TransactionsService', () => {
   let service: TransactionsService;
 
-  // Mocks
   const mockTransactionsRepository = {
     getSenderAndReceiverDetails: jest.fn(),
     createTransaction: jest.fn(),
@@ -35,30 +34,23 @@ describe('TransactionsService', () => {
           provide: TransactionsRepository,
           useValue: mockTransactionsRepository,
         },
-        {
-          provide: RabbitmqService,
-          useValue: mockRabbitmqService,
-        },
+        { provide: RabbitmqService, useValue: mockRabbitmqService },
       ],
     }).compile();
 
     service = module.get<TransactionsService>(TransactionsService);
-
-    // "Reseta" os mocks antes de cada teste
     jest.clearAllMocks();
   });
 
   describe('createTransaction', () => {
-    it('deve criar uma transação com sucesso', async () => {
-      // Arrange
+    it('should create a transaction successfully', async () => {
       const dto: CreateTransactionDto = {
         senderUserId: 'senderId',
         receiverUserId: 'receiverId',
         amount: 100,
-        description: 'Teste de transação',
+        description: 'Transaction test',
       };
 
-      // Simulamos que os usuários existem e que o sender tem saldo suficiente
       mockTransactionsRepository.getSenderAndReceiverDetails.mockResolvedValue({
         sender: {
           id: 'senderId',
@@ -70,7 +62,6 @@ describe('TransactionsService', () => {
         },
       });
 
-      // Simulamos que a transação foi criada no banco
       mockTransactionsRepository.createTransaction.mockResolvedValue({
         id: 'transactionId',
         senderUserId: 'senderId',
@@ -81,10 +72,8 @@ describe('TransactionsService', () => {
         updatedAt: new Date(),
       });
 
-      // Act
       const result = await service.createTransaction(dto);
 
-      // Assert
       expect(
         mockTransactionsRepository.getSenderAndReceiverDetails,
       ).toHaveBeenCalledWith('senderId', 'receiverId');
@@ -96,41 +85,36 @@ describe('TransactionsService', () => {
         'receiverId',
         100,
       );
-      expect(mockRabbitmqService.publish).toHaveBeenCalled(); // Verifica se publicou no RabbitMQ
+      expect(mockRabbitmqService.publish).toHaveBeenCalled();
       expect(result.id).toBe('transactionId');
     });
 
-    it('deve lançar NotFoundException se sender ou receiver não existir', async () => {
-      // Arrange
+    it('should throw NotFoundException if sender or receiver does not exist', async () => {
       const dto: CreateTransactionDto = {
         senderUserId: 'senderId',
         receiverUserId: 'receiverId',
         amount: 100,
-        description: 'Teste',
+        description: 'Test',
       };
 
-      // Simulamos que o sender ou receiver não existe
       mockTransactionsRepository.getSenderAndReceiverDetails.mockResolvedValue({
         sender: null,
         receiver: null,
       });
 
-      // Act & Assert
       await expect(service.createTransaction(dto)).rejects.toThrow(
         NotFoundException,
       );
     });
 
-    it('deve lançar UnprocessableEntityException se sender não tiver saldo', async () => {
-      // Arrange
+    it('should throw UnprocessableEntityException if sender has insufficient balance', async () => {
       const dto: CreateTransactionDto = {
         senderUserId: 'senderId',
         receiverUserId: 'receiverId',
         amount: 1000,
-        description: 'Teste',
+        description: 'Test',
       };
 
-      // Simulamos que existe o sender, mas sem saldo suficiente
       mockTransactionsRepository.getSenderAndReceiverDetails.mockResolvedValue({
         sender: {
           id: 'senderId',
@@ -142,7 +126,6 @@ describe('TransactionsService', () => {
         },
       });
 
-      // Act & Assert
       await expect(service.createTransaction(dto)).rejects.toThrow(
         UnprocessableEntityException,
       );
@@ -150,25 +133,17 @@ describe('TransactionsService', () => {
   });
 
   describe('getTransactionById', () => {
-    it('deve retornar a transação se existir', async () => {
-      // Arrange
+    it('should return the transaction if it exists', async () => {
       mockTransactionsRepository.findById.mockResolvedValue({ id: 'transId' });
-
-      // Act
       const result = await service.getTransactionById('transId');
-
-      // Assert
       expect(mockTransactionsRepository.findById).toHaveBeenCalledWith(
         'transId',
       );
       expect(result.id).toBe('transId');
     });
 
-    it('deve lançar NotFoundException se a transação não for encontrada', async () => {
-      // Arrange
+    it('should throw NotFoundException if the transaction is not found', async () => {
       mockTransactionsRepository.findById.mockResolvedValue(null);
-
-      // Act & Assert
       await expect(service.getTransactionById('invalidId')).rejects.toThrow(
         NotFoundException,
       );
@@ -176,8 +151,7 @@ describe('TransactionsService', () => {
   });
 
   describe('getTransactionsByUserId', () => {
-    it('deve retornar uma lista de transações de um usuário', async () => {
-      // Arrange
+    it('should return a list of transactions for a user', async () => {
       const mockTransactions = [
         {
           id: 't1',
@@ -195,11 +169,7 @@ describe('TransactionsService', () => {
       mockTransactionsRepository.findByUserId.mockResolvedValue(
         mockTransactions,
       );
-
-      // Act
       const result = await service.getTransactionsByUserId('userId');
-
-      // Assert
       expect(mockTransactionsRepository.findByUserId).toHaveBeenCalledWith(
         'userId',
       );
@@ -209,8 +179,7 @@ describe('TransactionsService', () => {
   });
 
   describe('cancelTransaction', () => {
-    it('deve cancelar uma transação pendente e reverter saldo', async () => {
-      // Arrange
+    it('should cancel a pending transaction and revert balance', async () => {
       const transaction = {
         id: 'tx1',
         senderUserId: 'senderId',
@@ -219,11 +188,7 @@ describe('TransactionsService', () => {
         status: 'PENDING',
       };
       mockTransactionsRepository.findById.mockResolvedValue(transaction);
-
-      // Act
       await service.cancelTransaction('tx1');
-
-      // Assert
       expect(mockTransactionsRepository.findById).toHaveBeenCalledWith('tx1');
       expect(mockTransactionsRepository.updateBalances).toHaveBeenCalledWith(
         'senderId',
@@ -236,18 +201,14 @@ describe('TransactionsService', () => {
       expect(mockRabbitmqService.publish).toHaveBeenCalled();
     });
 
-    it('deve lançar NotFoundException se a transação não existir', async () => {
-      // Arrange
+    it('should throw NotFoundException if the transaction does not exist', async () => {
       mockTransactionsRepository.findById.mockResolvedValue(null);
-
-      // Act & Assert
       await expect(service.cancelTransaction('invalidId')).rejects.toThrow(
         NotFoundException,
       );
     });
 
-    it('deve lançar UnprocessableEntityException se a transação não estiver PENDING', async () => {
-      // Arrange
+    it('should throw UnprocessableEntityException if the transaction is not pending', async () => {
       const transaction = {
         id: 'tx1',
         senderUserId: 'senderId',
@@ -256,8 +217,6 @@ describe('TransactionsService', () => {
         status: 'COMPLETED',
       };
       mockTransactionsRepository.findById.mockResolvedValue(transaction);
-
-      // Act & Assert
       await expect(service.cancelTransaction('tx1')).rejects.toThrow(
         UnprocessableEntityException,
       );
@@ -265,8 +224,7 @@ describe('TransactionsService', () => {
   });
 
   describe('getRecentTransactions', () => {
-    it('deve retornar transações recentes', async () => {
-      // Arrange
+    it('should return recent transactions', async () => {
       const mockTransactions = [
         { id: 't1', createdAt: new Date() },
         { id: 't2', createdAt: new Date() },
@@ -274,11 +232,7 @@ describe('TransactionsService', () => {
       mockTransactionsRepository.findRecentTransactions.mockResolvedValue(
         mockTransactions,
       );
-
-      // Act
       const result = await service.getRecentTransactions(7);
-
-      // Assert
       expect(
         mockTransactionsRepository.findRecentTransactions,
       ).toHaveBeenCalledWith(7);

@@ -9,7 +9,6 @@ import { TransactionsController } from '../controller/transactions.controller';
 describe('TransactionsController', () => {
   let controller: TransactionsController;
 
-  // Mocks
   const mockTransactionsService = {
     createTransaction: jest.fn(),
     getTransactionById: jest.fn(),
@@ -26,56 +25,43 @@ describe('TransactionsController', () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [TransactionsController],
       providers: [
-        {
-          provide: TransactionsService,
-          useValue: mockTransactionsService,
-        },
-        {
-          provide: MetricsService,
-          useValue: mockMetricsService,
-        },
+        { provide: TransactionsService, useValue: mockTransactionsService },
+        { provide: MetricsService, useValue: mockMetricsService },
       ],
     }).compile();
 
     controller = module.get<TransactionsController>(TransactionsController);
-
     jest.clearAllMocks();
   });
 
   describe('createTransaction', () => {
-    it('deve chamar o service.createTransaction e retornar void', async () => {
-      // Arrange
+    it('should call service.createTransaction and return void', async () => {
       const dto: CreateTransactionDto = {
         senderUserId: '123',
         receiverUserId: '456',
         amount: 100,
-        description: 'Teste',
+        description: 'Test',
       };
 
-      // Act
       const result = await controller.createTransaction(dto);
 
-      // Assert
       expect(mockMetricsService.increment).toHaveBeenCalled();
       expect(mockTransactionsService.createTransaction).toHaveBeenCalledWith(
         dto,
       );
-      expect(result).toBeUndefined(); // pois o método não retorna nada (void)
+      expect(result).toBeUndefined();
     });
   });
 
   describe('getTransactionById', () => {
-    it('deve retornar a transação se existir', async () => {
-      // Arrange
+    it('should return the transaction if it exists', async () => {
       const mockTransaction = { id: 'tx1' } as Transaction;
       mockTransactionsService.getTransactionById.mockResolvedValue(
         mockTransaction,
       );
 
-      // Act
       const result = await controller.getTransactionById('tx1');
 
-      // Assert
       expect(mockMetricsService.increment).toHaveBeenCalled();
       expect(mockTransactionsService.getTransactionById).toHaveBeenCalledWith(
         'tx1',
@@ -83,13 +69,10 @@ describe('TransactionsController', () => {
       expect(result).toEqual(mockTransaction);
     });
 
-    it('deve lançar NotFoundException se não existir', async () => {
-      // Arrange
+    it('should throw NotFoundException if the transaction does not exist', async () => {
       mockTransactionsService.getTransactionById.mockRejectedValue(
         new NotFoundException(),
       );
-
-      // Act & Assert
       await expect(controller.getTransactionById('invalid')).rejects.toThrow(
         NotFoundException,
       );
@@ -97,17 +80,14 @@ describe('TransactionsController', () => {
   });
 
   describe('getTransactionsByUserId', () => {
-    it('deve retornar lista de transações do user', async () => {
-      // Arrange
+    it('should return a list of user transactions', async () => {
       const mockTransactions = [{ id: 't1' }, { id: 't2' }] as Transaction[];
       mockTransactionsService.getTransactionsByUserId.mockResolvedValue(
         mockTransactions,
       );
 
-      // Act
       const result = await controller.getTransactionsByUserId('user123');
 
-      // Assert
       expect(mockMetricsService.increment).toHaveBeenCalled();
       expect(
         mockTransactionsService.getTransactionsByUserId,
@@ -117,14 +97,10 @@ describe('TransactionsController', () => {
   });
 
   describe('cancelTransaction', () => {
-    it('deve cancelar a transação', async () => {
-      // Arrange
+    it('should cancel the transaction', async () => {
       mockTransactionsService.cancelTransaction.mockResolvedValue(undefined);
-
-      // Act
       await controller.cancelTransaction('tx1');
 
-      // Assert
       expect(mockMetricsService.increment).toHaveBeenCalled();
       expect(mockTransactionsService.cancelTransaction).toHaveBeenCalledWith(
         'tx1',
@@ -133,17 +109,14 @@ describe('TransactionsController', () => {
   });
 
   describe('getRecentTransactions', () => {
-    it('deve retornar transações recentes', async () => {
-      // Arrange
+    it('should return recent transactions', async () => {
       const mockTransactions = [{ id: 't1' }, { id: 't2' }] as Transaction[];
       mockTransactionsService.getRecentTransactions.mockResolvedValue(
         mockTransactions,
       );
 
-      // Act
       const result = await controller.getRecentTransactions(7);
 
-      // Assert
       expect(mockMetricsService.increment).toHaveBeenCalled();
       expect(
         mockTransactionsService.getRecentTransactions,
