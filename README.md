@@ -59,10 +59,10 @@ docker ps
 
 | Serviço        | URL de Acesso |
 |---------------|--------------|
-| **API Gateway** | `http://18.188.38.96:3002` |
-| **Customers** | `http://18.188.38.96:3001` |
-| **Transactions** | `http://18.188.38.96:3000` |
-| **RabbitMQ Management UI** | `http://18.188.38.96:15672` (Usuário: `guest`, Senha: `guest`) |
+| **API Gateway** | `http://18.217.24.224:3002` |
+| **Customers** | `http://18.217.24.224:3001` |
+| **Transactions** | `http://18.217.24.224:3000` |
+| **RabbitMQ Management UI** | `http://18.217.24.224:15672` (Usuário: `guest`, Senha: `guest`) |
 
 4. **Conectar ao banco de dados via DBeaver**  
 
