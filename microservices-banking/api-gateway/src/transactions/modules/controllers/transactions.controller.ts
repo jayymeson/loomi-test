@@ -8,7 +8,12 @@ import {
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import { GetUser } from 'src/decorator/get-user.decorator';
 import { TransactionsService } from '../services/transactions.service';
 import { CreateTransactionDto } from 'src/transactions/dto/create-transaction.dto';
@@ -26,6 +31,7 @@ export class TransactionsController {
   })
   @ApiResponse({ status: 400, description: 'Bad Request' })
   @ApiResponse({ status: 404, description: 'User not found in Transaction DB' })
+  @ApiBearerAuth()
   @Post()
   async createTransaction(
     @GetUser('sub') senderUserId: string,
@@ -39,6 +45,7 @@ export class TransactionsController {
   @ApiOperation({ summary: 'Get transaction by ID' })
   @ApiResponse({ status: 200, description: 'The transaction data' })
   @ApiResponse({ status: 404, description: 'Transaction not found' })
+  @ApiBearerAuth()
   @Get(':transactionId')
   async getTransactionById(
     @Param('transactionId') transactionId: string,
@@ -48,6 +55,7 @@ export class TransactionsController {
 
   @ApiOperation({ summary: 'Get transactions for current user' })
   @ApiResponse({ status: 200, description: 'List of user transactions' })
+  @ApiBearerAuth()
   @Get()
   async getTransactionsByUserId(
     @GetUser('sub') userId: string,
@@ -56,6 +64,7 @@ export class TransactionsController {
   }
 
   @ApiOperation({ summary: 'Cancel a pending transaction' })
+  @ApiBearerAuth()
   @ApiResponse({
     status: 204,
     description: 'Transaction canceled successfully',
@@ -69,6 +78,7 @@ export class TransactionsController {
   }
 
   @ApiOperation({ summary: 'Get recent transactions' })
+  @ApiBearerAuth()
   @ApiResponse({ status: 200, description: 'List of recent transactions' })
   @Get('recent/:days')
   async getRecentTransactions(

@@ -15,6 +15,7 @@ import { UsersService } from '../services/user.service';
 import { CreateUserDto } from 'src/customer/dto/create-user.dto';
 import { Public } from 'src/decorator/decorator.public';
 import {
+  ApiBearerAuth,
   ApiBody,
   ApiConsumes,
   ApiOperation,
@@ -25,6 +26,8 @@ import { Express } from 'express';
 import { UpdateUserDto } from 'src/customer/dto/udate-user.dto';
 import { User } from 'src/customer/interface/user.interface';
 import { GetUser } from 'src/decorator/get-user.decorator';
+import { DepositDto } from 'src/customer/dto/create-deposit.dto';
+import { ErrorMessages } from 'src/enum/error.messages';
 
 @Controller('users')
 export class UsersController {
@@ -87,20 +90,19 @@ export class UsersController {
   @ApiResponse({ status: 200, description: 'Deposit successful' })
   @ApiResponse({ status: 400, description: 'Invalid deposit amount' })
   @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiBearerAuth()
   @Post('deposit')
   async deposit(
     @GetUser('sub') userId: string,
-    @Body() body: { amount: number },
+    @Body() depositDto: DepositDto,
   ): Promise<void> {
-    if (body.amount <= 0) {
-      throw new BadRequestException('Deposit amount must be greater than zero');
-    }
-    await this.usersService.deposit(userId, body.amount);
+    await this.usersService.deposit(userId, depositDto.amount);
   }
 
   @ApiOperation({ summary: 'Get current user data' })
   @ApiResponse({ status: 200, description: 'Returns the user data.' })
   @ApiResponse({ status: 404, description: 'User not found.' })
+  @ApiBearerAuth()
   @Get()
   async getUserById(@GetUser('sub') userId: string): Promise<User> {
     return this.usersService.getUserById(userId);
@@ -111,6 +113,7 @@ export class UsersController {
   @ApiResponse({ status: 400, description: 'Bad Request.' })
   @ApiResponse({ status: 404, description: 'User not found.' })
   @ApiResponse({ status: 500, description: 'Internal Server Error' })
+  @ApiBearerAuth()
   @HttpCode(HttpStatus.NO_CONTENT)
   @Patch('update')
   async updateUser(
@@ -129,6 +132,7 @@ export class UsersController {
   @ApiResponse({ status: 404, description: 'User not found.' })
   @ApiResponse({ status: 500, description: 'Internal Server Error' })
   @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiBearerAuth()
   @Patch('profile-picture')
   @UseInterceptors(FileInterceptor('profilePicture'))
   @ApiConsumes('multipart/form-data')
@@ -149,10 +153,15 @@ export class UsersController {
     @UploadedFile() file?: Express.Multer.File,
   ): Promise<void> {
     if (!file) {
+      throw new BadRequestException(ErrorMessages.NO_PICTURE_PROVIDED);
+    }
+    const allowedMimeTypes = ['image/jpeg', 'image/png'];
+    if (!allowedMimeTypes.includes(file.mimetype)) {
       throw new BadRequestException(
-        'You need to upload a file to update your profile picture.',
+        'Invalid file type. Only JPEG/PNG allowed.',
       );
     }
+
     await this.usersService.updateProfilePicture(userId, file);
     return;
   }
