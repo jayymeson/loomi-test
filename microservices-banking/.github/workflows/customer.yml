@@ -1,0 +1,46 @@
+name: CUSTOMERS-CI-CD
+
+on:
+  push:
+    branches:
+      - develop
+    paths:
+      - "customers/src/**"
+  workflow_dispatch:
+
+jobs:
+  CUSTOMERS-CI:
+    runs-on: ubuntu-22.04
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Login to AWS ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+
+      - name: Build and push Docker images
+        uses: docker/build-push-action@v4.1.1
+        with:
+          context: ./customers
+          file: ./customers/Dockerfile
+          push: true
+          tags: |
+            054425168163.dkr.ecr.us-east-2.amazonaws.com/customers:latest
+            054425168163.dkr.ecr.us-east-2.amazonaws.com/customers:v${{github.run_number}}
+
+  CUSTOMERS-CD:
+    runs-on: ubuntu-22.04
+    needs: [CUSTOMERS-CI]
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Kubeconfig
+        run: echo "${{ secrets.K8S_CONFIG }}" | base64 -d > ~/.kube/config
+
+      - name: Deploy to Kubernetes cluster
+        uses: Azure/k8s-deploy@v4.9
+        with:
+          images: 054425168163.dkr.ecr.us-east-2.amazonaws.com/customers:v${{github.run_number}}
+          manifests: |
+            k8s/customers.yml

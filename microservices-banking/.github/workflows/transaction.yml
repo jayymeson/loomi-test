@@ -1,0 +1,46 @@
+name: TRANSACTIONS-CI-CD
+
+on:
+  push:
+    branches:
+      - develop
+    paths:
+      - "transactions/src/**"
+  workflow_dispatch:
+
+jobs:
+  TRANSACTIONS-CI:
+    runs-on: ubuntu-22.04
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Login to AWS ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+
+      - name: Build and push Docker images
+        uses: docker/build-push-action@v4.1.1
+        with:
+          context: ./transactions
+          file: ./transactions/Dockerfile
+          push: true
+          tags: |
+            054425168163.dkr.ecr.us-east-2.amazonaws.com/transactions:latest
+            054425168163.dkr.ecr.us-east-2.amazonaws.com/transactions:v${{github.run_number}}
+
+  TRANSACTIONS-CD:
+    runs-on: ubuntu-22.04
+    needs: [TRANSACTIONS-CI]
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Kubeconfig
+        run: echo "${{ secrets.K8S_CONFIG }}" | base64 -d > ~/.kube/config
+
+      - name: Deploy to Kubernetes cluster
+        uses: Azure/k8s-deploy@v4.9
+        with:
+          images: 054425168163.dkr.ecr.us-east-2.amazonaws.com/transactions:v${{github.run_number}}
+          manifests: |
+            k8s/transactions.yml

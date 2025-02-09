@@ -1,0 +1,35 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: customers-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: customers
+  template:
+    metadata:
+      name: customers
+      labels:
+        app: customers
+    spec:
+      containers:
+      - name: customers
+        image: 054425168163.dkr.ecr.us-east-2.amazonaws.com/customers:latest
+        ports:
+        - containerPort: 3001
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: customers-service
+spec:
+  type: ClusterIP
+  selector:
+    app: customers
+  ports:
+    - name: http
+      protocol: TCP
+      port: 3001
+      targetPort: 3001

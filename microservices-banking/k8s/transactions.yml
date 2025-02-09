@@ -1,0 +1,35 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: transactions-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: transactions
+  template:
+    metadata:
+      name: transactions
+      labels:
+        app: transactions
+    spec:
+      containers:
+      - name: transactions
+        image: 054425168163.dkr.ecr.us-east-2.amazonaws.com/transactions:latest
+        ports:
+        - containerPort: 3000
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: transactions-service
+spec:
+  type: ClusterIP
+  selector:
+    app: transactions
+  ports:
+    - name: http
+      protocol: TCP
+      port: 3000
+      targetPort: 3000

@@ -1,0 +1,21 @@
+Run application without kubernet
+ 1 Create an image
+ 2 push the image
+ 3 Configure a file deployment
+ 4 Configure a service file (where you will be able to access the container)
+
+docker ps - displays all running containers
+
+Generate Images
+  docker build -t jayymeson/api-geteway-dev:1.1 . (1.1 stable version)
+  docker push jayymeson/api-geteway-dev:1.1
+
+  docker build -t jayymeson/customers-dev:1.1 . (1.1 stable version)
+  docker push jayymeson/customers-dev:1.1
+
+  docker build -t jayymeson/transactions-dev:1.1 . (1.1 stable version)
+  docker push jayymeson/transactions-dev:1.1
+
+kubectl apply -f api-geteway.yml
+kubectl apply -f customers.yml
+kubectl apply -f transactions.yml
