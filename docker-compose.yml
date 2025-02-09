@@ -5,7 +5,7 @@ services:
     hostname: rabbitmq
     ports:
       - 15673:15672
-      - 5673:5672 
+      - 5673:5672
     volumes:
       - ./microservices-banking/.docker/rabbitmq/.rabbitmq_data:/var/lib/rabbitmq/mnesia
     environment:
@@ -13,6 +13,19 @@ services:
       - RABBITMQ_DEFAULT_PASS=${RABBITMQ_DEFAULT_PASS}
     env_file:
       - ./microservices-banking/.env
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: "256M"
+        reservations:
+          cpus: "0.25"
+          memory: "128M"
+    healthcheck:
+      test: ["CMD", "rabbitmqctl", "status"]
+      interval: 5s
+      timeout: 10s
+      retries: 5
 
   postgres-transactions:
     image: postgres:13
@@ -28,6 +41,14 @@ services:
       - ./microservices-banking/.docker/postgresql/transactions-init-scripts:/docker-entrypoint-initdb.d
     env_file:
       - ./microservices-banking/.env
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: "256M"
+        reservations:
+          cpus: "0.25"
+          memory: "128M"
 
   postgres-customers:
     image: postgres:13
@@ -43,6 +64,14 @@ services:
       - ./microservices-banking/.docker/postgresql/clients-init-scripts:/docker-entrypoint-initdb.d
     env_file:
       - ./microservices-banking/.env
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: "256M"
+        reservations:
+          cpus: "0.25"
+          memory: "128M"
 
   transactions:
     container_name: transactions
@@ -51,8 +80,10 @@ services:
       dockerfile: Dockerfile
     command: npm run start:dev
     depends_on:
-      - rabbitmq
-      - postgres-transactions
+      rabbitmq:
+        condition: service_healthy
+      postgres-transactions:
+        condition: service_started
     ports:
       - 3000:3000
     volumes:
@@ -60,6 +91,14 @@ services:
       - /usr/src/app/node_modules
     env_file:
       - ./microservices-banking/transactions/.env
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: "256M"
+        reservations:
+          cpus: "0.25"
+          memory: "128M"
 
   customers:
     container_name: customers
@@ -68,8 +107,10 @@ services:
       dockerfile: Dockerfile
     command: npm run start:dev
     depends_on:
-      - rabbitmq
-      - postgres-customers
+      rabbitmq:
+        condition: service_healthy
+      postgres-customers:
+        condition: service_started
     ports:
       - 3001:3001
     volumes:
@@ -77,6 +118,14 @@ services:
       - /usr/src/app/node_modules
     env_file:
       - ./microservices-banking/customers/.env
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: "256M"
+        reservations:
+          cpus: "0.25"
+          memory: "128M"
 
   api-getway:
     container_name: api-getway
@@ -85,7 +134,12 @@ services:
       dockerfile: Dockerfile
     command: npm run start:dev
     depends_on:
-      - rabbitmq
+      rabbitmq:
+        condition: service_healthy
+      transactions:
+        condition: service_started
+      customers:
+        condition: service_started
     ports:
       - 3002:3002
     environment:
@@ -96,6 +150,14 @@ services:
       - /usr/src/app/node_modules
     env_file:
       - ./microservices-banking/api-gateway/.env
+    deploy:
+      resources:
+        limits:
+          cpus: "0.75"
+          memory: "384M"
+        reservations:
+          cpus: "0.375"
+          memory: "192M"
 
 
   prometheus:
@@ -108,6 +170,14 @@ services:
     restart: always
     networks:
       - monitoring
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: "128M"
+        reservations:
+          cpus: "0.125"
+          memory: "64M"
 
   grafana:
     image: grafana/grafana:10.0.3
@@ -121,6 +191,14 @@ services:
     restart: always
     networks:
       - monitoring
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: "128M"
+        reservations:
+          cpus: "0.125"
+          memory: "64M"
 
 networks:
   monitoring:
