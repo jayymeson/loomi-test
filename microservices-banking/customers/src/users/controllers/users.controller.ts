@@ -9,9 +9,7 @@ import {
   UploadedFile,
   HttpStatus,
   HttpCode,
-  BadRequestException,
   Logger,
-  NotFoundException,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import {
@@ -29,6 +27,9 @@ import { plainToInstance } from 'class-transformer';
 import { Express } from 'express';
 import { MetricsService } from 'src/metrics/metrics.service';
 import { DepositDto } from '../dto/create-deposit.dto';
+import { UserNotFoundException } from 'src/exceptions/user-not-found.exception';
+import { BaseException } from 'src/exceptions/base-exception';
+import { ErrorMessages } from '../enum/error.message.enum';
 
 @ApiTags('users')
 @Controller('api/users')
@@ -158,7 +159,7 @@ export class UsersController {
   async getUserByEmail(@Param('email') email: string) {
     const user = await this.usersService.findByEmail(email);
     if (!user) {
-      throw new NotFoundException(`User not found with email: ${email}`);
+      throw new UserNotFoundException(`User not found with email: ${email}`);
     }
     return user;
   }
@@ -195,10 +196,10 @@ export class UsersController {
     @UploadedFile() file?: Express.Multer.File,
   ): Promise<void> {
     if (!file) {
-      this.logger.error(
-        `[UsersController] [updateProfilePicture] No file provided for user ID: ${userId}`,
+      throw new BaseException(
+        ErrorMessages.NO_PICTURE_PROVIDED,
+        HttpStatus.BAD_REQUEST,
       );
-      throw new BadRequestException('You must provide a file to update.');
     }
 
     await this.usersService.updateProfilePicture(userId, file);

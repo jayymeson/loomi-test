@@ -1,10 +1,4 @@
-import {
-  ConflictException,
-  Injectable,
-  InternalServerErrorException,
-  Logger,
-  NotFoundException,
-} from '@nestjs/common';
+import { HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { UsersRepository } from '../repositories/users.repository';
 import { CreateUserDto } from '../dto/create-user.dto';
 import { UpdateUserDto } from '../dto/update-user.dto';
@@ -12,12 +6,14 @@ import { User } from '../interface/user.interface';
 import * as admin from 'firebase-admin';
 import { v4 as uuidv4 } from 'uuid';
 import { Express } from 'express';
-import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 import { RabbitmqService } from 'src/rabbitmq/rabbitmq.service';
 import { ErrorMessages } from '../enum/error.message.enum';
 import { RabbitmqRoutingKeys } from 'src/rabbitmq/enum/rabbitmq-events.enum';
 import * as bcrypt from 'bcrypt';
 import { DepositDto } from '../dto/create-deposit.dto';
+import { UserNotFoundException } from 'src/exceptions/user-not-found.exception';
+import { EmailAlreadyExistsException } from 'src/exceptions/email-already-exists.exception';
+import { BaseException } from 'src/exceptions/base-exception';
 
 @Injectable()
 export class UsersService {
@@ -50,6 +46,18 @@ export class UsersService {
     file?: Express.Multer.File,
   ): Promise<User> {
     try {
+      const existingUser = await this.usersRepository.findByEmail(
+        createUserDto.email,
+      );
+
+      if (existingUser) {
+        this.logger.warn(
+          `[createUser] Email already in use: ${createUserDto.email}`,
+        );
+        throw new EmailAlreadyExistsException(
+          `Email ${createUserDto.email} is already in use`,
+        );
+      }
       if (file) {
         const bucket = admin.storage().bucket();
         const filename = `${uuidv4()}_${file.originalname}`;
@@ -77,18 +85,8 @@ export class UsersService {
       this.rabbitmqService.publish(RabbitmqRoutingKeys.USER_CREATED, user);
       return user;
     } catch (error) {
-      this.logger.error(
-        `[UsersService] [createUser] Error while creating user: ${error?.message}`,
-        error?.stack,
-      );
-
-      if (error instanceof PrismaClientKnownRequestError) {
-        this.handlePrismaError(error);
-      }
-
-      throw new InternalServerErrorException(
-        ErrorMessages.INTERNAL_SERVER_ERROR,
-      );
+      this.logger.error(`[createUser] Error: ${error.message}`, error.stack);
+      throw error;
     }
   }
 
@@ -117,7 +115,7 @@ export class UsersService {
       this.logger.warn(
         `[UsersService] [deposit] User not found with ID: ${userId}`,
       );
-      throw new NotFoundException('User not found');
+      throw new UserNotFoundException('User not found');
     }
 
     await this.usersRepository.deposit(userId, amount);
@@ -139,21 +137,16 @@ export class UsersService {
    * @returns {Promise<User>} - The found user or throws an error
    */
   async getUserById(userId: string): Promise<User> {
-    try {
-      const user = await this.usersRepository.findById(userId);
-      if (!user) {
-        this.logger.warn(
-          `[UsersService] [getUserById] User not found for ID: ${userId}`,
-        );
-      }
-      return user;
-    } catch (error) {
-      this.logger.error(
-        `[UsersService] [getUserById] Error fetching user by ID: ${userId} - ${error.message}`,
-        error.stack,
-      );
-      throw error;
+    this.logger.log(`[getUserById] Fetching user with ID: ${userId}`);
+
+    const user = await this.usersRepository.findById(userId);
+
+    if (!user) {
+      this.logger.warn(`[getUserById] User not found with ID: ${userId}`);
+      throw new UserNotFoundException(`User with ID ${userId} not found`);
     }
+
+    return user;
   }
 
   /**
@@ -200,7 +193,10 @@ export class UsersService {
       this.logger.error(
         `[UsersService] [updateProfilePicture] No file provided for user ID: ${userId}`,
       );
-      throw new Error(ErrorMessages.NO_PICTURE_PROVIDED);
+      throw new BaseException(
+        ErrorMessages.NO_PICTURE_PROVIDED,
+        HttpStatus.BAD_REQUEST,
+      );
     }
 
     try {
@@ -231,23 +227,5 @@ export class UsersService {
       );
       throw error;
     }
-  }
-
-  /**
-   * Handle Prisma-specific errors, transforming them into the appropriate HTTP exception.
-   * This helps to keep catch blocks clean and maintain a single responsibility.
-   */
-  private handlePrismaError(error: PrismaClientKnownRequestError): never {
-    if (error.code === 'P2002') {
-      const targetFields = error.meta?.target as string[] | undefined;
-      if (
-        Array.isArray(targetFields) &&
-        targetFields.includes('agency_account_unique')
-      ) {
-        throw new ConflictException(ErrorMessages.BANKING_DETAILS_IN_USE);
-      }
-      throw new ConflictException(ErrorMessages.USER_ALREADY_EXISTS);
-    }
-    throw error;
   }
 }

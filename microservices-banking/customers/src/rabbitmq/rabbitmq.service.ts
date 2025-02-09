@@ -1,5 +1,6 @@
 import { AmqpConnection } from '@golevelup/nestjs-rabbitmq';
 import { Injectable, Logger } from '@nestjs/common';
+import { RabbitmqRoutingKeys } from './enum/rabbitmq-events.enum';
 
 @Injectable()
 export class RabbitmqService {
@@ -12,6 +13,10 @@ export class RabbitmqService {
       `[RabbitmqService][publish] Publish Message -> Exchange: user-exchange | RoutingKey: ${routingKey}}`,
     );
 
-    this.amqpConnection.publish<any>('user-exchange', routingKey, data);
+    this.amqpConnection.publish<any>(
+      RabbitmqRoutingKeys.USER_EXCHANGE,
+      routingKey,
+      data,
+    );
   }
 }
