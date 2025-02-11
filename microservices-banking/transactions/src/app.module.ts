@@ -31,7 +31,7 @@ const isTestEnvironment = process.env.NODE_ENV === 'test';
         },
       ],
       uri:
-        `${process.env.URI_RABBITMQ_LOCAL} ` ||
+        `${process.env.URI_RABBITMQ_LOCAL}` ||
         'amqp://guest:guest@rabbitmq:5672',
       enableControllerDiscovery: !isTestEnvironment,
     }),
